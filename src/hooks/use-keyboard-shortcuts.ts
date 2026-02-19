@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useTransportStore } from '@/stores/transport-store';
-import { useUIStore } from '@/stores/ui-store';
-import { useProjectStore } from '@/stores/project-store';
+import { useTransportStore } from '../stores/transport-store';
+import { useUIStore } from '../stores/ui-store';
+import { useProjectStore } from '../stores/project-store';
 
 /**
  * Global keyboard shortcuts for the DAW.
@@ -85,6 +85,14 @@ export function useKeyboardShortcuts(): void {
           if (e.metaKey || e.ctrlKey) {
             e.preventDefault();
             ui.setZoomX(Math.max(ui.zoomX / 1.25, 0.1));
+          }
+          break;
+
+        // Toggle Timeline / Session view
+        case 'Tab':
+          if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            ui.setActiveView(ui.activeView === 'timeline' ? 'session' : 'timeline');
           }
           break;
 

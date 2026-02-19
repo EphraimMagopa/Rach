@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useProjectStore } from '@/stores/project-store';
-import { getProjectPersistence } from '@/core/persistence/project-persistence';
-import { UndoManager } from '@/core/undo/undo-manager';
-import { createDefaultProject } from '@/core/models';
+import { useProjectStore } from '../stores/project-store';
+import { getProjectPersistence } from '../core/persistence/project-persistence';
+import { UndoManager } from '../core/undo/undo-manager';
+import { createDefaultProject } from '../core/models';
 
 let sharedUndoManager: UndoManager | null = null;
 

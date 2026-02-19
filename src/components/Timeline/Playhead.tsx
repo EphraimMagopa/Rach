@@ -1,5 +1,5 @@
-import { useTransportStore } from '@/stores/transport-store';
-import { useUIStore } from '@/stores/ui-store';
+import { useTransportStore } from '../../stores/transport-store';
+import { useUIStore } from '../../stores/ui-store';
 
 interface PlayheadProps {
   trackHeaderWidth: number;

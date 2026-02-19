@@ -5,7 +5,7 @@ import {
   SkipBack,
   Repeat
 } from 'lucide-react'
-import { useTransportStore } from '@/stores/transport-store'
+import { useTransportStore } from '../../stores/transport-store'
 
 function formatTime(beats: number, tempo: number): string {
   const totalSeconds = (beats / tempo) * 60

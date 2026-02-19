@@ -1,7 +1,7 @@
-import type { Clip } from '@/core/models';
-import { useUIStore } from '@/stores/ui-store';
-import { useProjectStore } from '@/stores/project-store';
-import { useTransportStore } from '@/stores/transport-store';
+import type { Clip } from '../../core/models';
+import { useUIStore } from '../../stores/ui-store';
+import { useProjectStore } from '../../stores/project-store';
+import { useTransportStore } from '../../stores/transport-store';
 import { WaveformView } from './WaveformView';
 
 interface ClipViewProps {

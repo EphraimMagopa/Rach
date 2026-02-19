@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import type { MIDINote } from '@/core/models';
+import type { MIDINote } from '../../core/models';
 
 interface NoteBlockProps {
   note: MIDINote;

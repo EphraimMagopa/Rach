@@ -1,14 +1,15 @@
 import { useEffect, useRef } from 'react';
-import { useTransportStore } from '@/stores/transport-store';
-import { useProjectStore } from '@/stores/project-store';
-import { TransportEngine } from '@/core/transport/transport-engine';
-import { PlaybackEngine } from '@/core/audio/playback-engine';
-import { Metronome } from '@/core/audio/metronome';
-import { MIDISequencer } from '@/core/midi/midi-sequencer';
-import { TrackInstrumentManager } from '@/core/audio/track-instrument-manager';
-import { AudioEngine } from '@/core/audio/audio-engine';
-import { getAudioFileManager } from '@/core/audio/audio-file-manager';
-import { TimePosition } from '@/core/models/time-position';
+import { useTransportStore } from '../stores/transport-store';
+import { useProjectStore } from '../stores/project-store';
+import { TransportEngine } from '../core/transport/transport-engine';
+import { PlaybackEngine } from '../core/audio/playback-engine';
+import { Metronome } from '../core/audio/metronome';
+import { MIDISequencer } from '../core/midi/midi-sequencer';
+import { TrackInstrumentManager } from '../core/audio/track-instrument-manager';
+import { AudioEngine } from '../core/audio/audio-engine';
+import { getAudioFileManager } from '../core/audio/audio-file-manager';
+import { TimePosition } from '../core/models/time-position';
+import { AutomationEngine } from '../core/automation/automation-engine';
 
 let sharedTransportEngine: TransportEngine | null = null;
 let sharedMidiSequencer: MIDISequencer | null = null;
@@ -135,6 +136,13 @@ export function useTransport(audioEngine: AudioEngine): TransportEngine {
     };
     engine.addScheduleCallback(audioScheduleCallback);
 
+    // Register automation engine schedule callback
+    const automationEngine = new AutomationEngine(audioEngine, () => {
+      const tracks = useProjectStore.getState().project.tracks;
+      return { tracks };
+    });
+    engine.addScheduleCallback(automationEngine.scheduleRange);
+
     // Subscribe to store changes → drive engine
     const unsub = useTransportStore.subscribe((state, prevState) => {
       // Play/Stop
@@ -185,6 +193,7 @@ export function useTransport(audioEngine: AudioEngine): TransportEngine {
       unsub();
       engine.removeScheduleCallback(midiScheduleCallback);
       engine.removeScheduleCallback(audioScheduleCallback);
+      engine.removeScheduleCallback(automationEngine.scheduleRange);
     };
   }, [audioEngine, engine, sequencer, instrumentManager]);
 

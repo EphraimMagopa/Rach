@@ -4,10 +4,12 @@ import { readFile, writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { AuthService } from './services/auth-service'
 import { ClaudeAgentService } from './services/claude-agent-service'
+import { PluginHostService } from './services/plugin-host-service'
 
 let mainWindow: BrowserWindow | null = null
 const authService = new AuthService()
 const agentService = new ClaudeAgentService(authService)
+const pluginHost = new PluginHostService()
 
 function createMenu(window: BrowserWindow): Menu {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -206,6 +208,39 @@ function setupIPC(): void {
     return { success: true }
   })
 
+  // Plugin IPC
+  ipcMain.handle('plugin:scan', () => {
+    return pluginHost.scanPlugins()
+  })
+
+  ipcMain.handle('plugin:load', (_event, pluginPath: string) => {
+    return pluginHost.loadPlugin(pluginPath)
+  })
+
+  ipcMain.handle('plugin:getParams', (_event, instanceId: string) => {
+    return pluginHost.getParameters(instanceId)
+  })
+
+  ipcMain.on('plugin:setParam', (_event, instanceId: string, paramId: number, value: number) => {
+    pluginHost.setParameter(instanceId, paramId, value)
+  })
+
+  ipcMain.handle('plugin:process', (_event, instanceId: string, buffer: Float32Array) => {
+    return pluginHost.processAudio(instanceId, buffer)
+  })
+
+  ipcMain.handle('plugin:getState', (_event, instanceId: string) => {
+    return pluginHost.getState(instanceId)
+  })
+
+  ipcMain.handle('plugin:setState', (_event, instanceId: string, state: string) => {
+    pluginHost.setState(instanceId, state)
+  })
+
+  ipcMain.on('plugin:unload', (_event, instanceId: string) => {
+    pluginHost.unloadPlugin(instanceId)
+  })
+
   // Agent IPC
   ipcMain.handle(
     'agent:sendMessage',
@@ -295,6 +330,7 @@ app.whenReady().then(() => {
   })
 
   setupIPC()
+  pluginHost.initialize()
   createWindow()
 
   app.on('activate', () => {

@@ -1,4 +1,5 @@
 export type InterpolationMode = 'linear' | 'exponential' | 'step';
+export type AutomationRecordMode = 'off' | 'touch' | 'latch' | 'write';
 
 export interface AutomationPoint {
   id: string;

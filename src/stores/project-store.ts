@@ -1,6 +1,9 @@
 import { create } from 'zustand';
-import type { Project, Track, TimeSignature, Clip, MIDINote } from '@/core/models';
-import { createDefaultProject } from '@/core/models';
+import type { Project, Track, TimeSignature, Clip, MIDINote } from '../core/models';
+import type { EffectInstance } from '../core/models/effects';
+import type { AutomationLane, AutomationPoint } from '../core/models/automation';
+import type { Send } from '../core/models/send';
+import { createDefaultProject } from '../core/models';
 
 interface ProjectState {
   project: Project;
@@ -25,6 +28,26 @@ interface ProjectState {
   addMidiNote: (trackId: string, clipId: string, note: MIDINote) => void;
   removeMidiNote: (trackId: string, clipId: string, noteId: string) => void;
   updateMidiNote: (trackId: string, clipId: string, noteId: string, updates: Partial<MIDINote>) => void;
+
+  // Effect CRUD (Phase 2)
+  addEffect: (trackId: string, effect: EffectInstance) => void;
+  removeEffect: (trackId: string, effectId: string) => void;
+  updateEffect: (trackId: string, effectId: string, updates: Partial<EffectInstance>) => void;
+  reorderEffects: (trackId: string, effectIds: string[]) => void;
+  updateEffectParameter: (trackId: string, effectId: string, paramName: string, value: number) => void;
+
+  // Automation CRUD (Phase 2)
+  addAutomationLane: (trackId: string, lane: AutomationLane) => void;
+  removeAutomationLane: (trackId: string, laneId: string) => void;
+  addAutomationPoint: (trackId: string, laneId: string, point: AutomationPoint) => void;
+  removeAutomationPoint: (trackId: string, laneId: string, pointId: string) => void;
+  updateAutomationPoint: (trackId: string, laneId: string, pointId: string, updates: Partial<AutomationPoint>) => void;
+
+  // Send CRUD (Phase 2)
+  addSend: (trackId: string, send: Send) => void;
+  removeSend: (trackId: string, sendId: string) => void;
+  updateSend: (trackId: string, sendId: string, updates: Partial<Send>) => void;
+  setTrackOutput: (trackId: string, output: Track['output']) => void;
 }
 
 function mapClipsInTrack(
@@ -46,6 +69,10 @@ function mapNotesInClip(
     if (c.id !== clipId || c.type !== 'midi' || !c.midiData) return c;
     return { ...c, midiData: { ...c.midiData, notes: fn(c.midiData.notes) } };
   });
+}
+
+function mapTrack(tracks: Track[], trackId: string, fn: (t: Track) => Track): Track[] {
+  return tracks.map((t) => (t.id === trackId ? fn(t) : t));
 }
 
 export const useProjectStore = create<ProjectState>((set) => ({
@@ -163,6 +190,196 @@ export const useProjectStore = create<ProjectState>((set) => ({
             notes.map((n) => (n.id === noteId ? { ...n, ...updates } : n))
           )
         ),
+      },
+    })),
+
+  // ═══════════════════════════════════════
+  // Effect CRUD (Phase 2)
+  // ═══════════════════════════════════════
+  addEffect: (trackId, effect) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          effects: [...t.effects, effect],
+        })),
+      },
+    })),
+
+  removeEffect: (trackId, effectId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          effects: t.effects.filter((e) => e.id !== effectId),
+        })),
+      },
+    })),
+
+  updateEffect: (trackId, effectId, updates) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          effects: t.effects.map((e) => (e.id === effectId ? { ...e, ...updates } : e)),
+        })),
+      },
+    })),
+
+  reorderEffects: (trackId, effectIds) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => {
+          const ordered = effectIds
+            .map((id) => t.effects.find((e) => e.id === id))
+            .filter((e): e is EffectInstance => e !== undefined);
+          return { ...t, effects: ordered };
+        }),
+      },
+    })),
+
+  updateEffectParameter: (trackId, effectId, paramName, value) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          effects: t.effects.map((e) => {
+            if (e.id !== effectId) return e;
+            return {
+              ...e,
+              parameters: e.parameters.map((p) =>
+                p.name === paramName ? { ...p, value } : p
+              ),
+            };
+          }),
+        })),
+      },
+    })),
+
+  // ═══════════════════════════════════════
+  // Automation CRUD (Phase 2)
+  // ═══════════════════════════════════════
+  addAutomationLane: (trackId, lane) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          automationLanes: [...t.automationLanes, lane],
+        })),
+      },
+    })),
+
+  removeAutomationLane: (trackId, laneId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          automationLanes: t.automationLanes.filter((l) => l.id !== laneId),
+        })),
+      },
+    })),
+
+  addAutomationPoint: (trackId, laneId, point) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          automationLanes: t.automationLanes.map((l) =>
+            l.id === laneId
+              ? { ...l, points: [...l.points, point].sort((a, b) => a.beat - b.beat) }
+              : l
+          ),
+        })),
+      },
+    })),
+
+  removeAutomationPoint: (trackId, laneId, pointId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          automationLanes: t.automationLanes.map((l) =>
+            l.id === laneId
+              ? { ...l, points: l.points.filter((p) => p.id !== pointId) }
+              : l
+          ),
+        })),
+      },
+    })),
+
+  updateAutomationPoint: (trackId, laneId, pointId, updates) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          automationLanes: t.automationLanes.map((l) =>
+            l.id === laneId
+              ? {
+                  ...l,
+                  points: l.points
+                    .map((p) => (p.id === pointId ? { ...p, ...updates } : p))
+                    .sort((a, b) => a.beat - b.beat),
+                }
+              : l
+          ),
+        })),
+      },
+    })),
+
+  // ═══════════════════════════════════════
+  // Send CRUD (Phase 2)
+  // ═══════════════════════════════════════
+  addSend: (trackId, send) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          sends: [...(t.sends ?? []), send],
+        })),
+      },
+    })),
+
+  removeSend: (trackId, sendId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          sends: (t.sends ?? []).filter((s) => s.id !== sendId),
+        })),
+      },
+    })),
+
+  updateSend: (trackId, sendId, updates) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          sends: (t.sends ?? []).map((s) => (s.id === sendId ? { ...s, ...updates } : s)),
+        })),
+      },
+    })),
+
+  setTrackOutput: (trackId, output) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        tracks: mapTrack(state.project.tracks, trackId, (t) => ({
+          ...t,
+          output,
+        })),
       },
     })),
 }));

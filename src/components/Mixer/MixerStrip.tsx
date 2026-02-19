@@ -1,8 +1,10 @@
-import type { Track } from '@/core/models';
-import { TRACK_COLOR_MAP } from '@/core/models';
-import { useProjectStore } from '@/stores/project-store';
-import { useAudioEngine } from '@/hooks/use-audio-engine';
+import type { Track } from '../../core/models';
+import { TRACK_COLOR_MAP } from '../../core/models';
+import { useProjectStore } from '../../stores/project-store';
+import { useAudioEngine } from '../../hooks/use-audio-engine';
 import { VUMeter } from './VUMeter';
+import { EffectRack } from './EffectRack';
+import { SendPanel } from './SendPanel';
 
 interface MixerStripProps {
   track: Track;
@@ -19,19 +21,31 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
 
   return (
     <div
-      className={`w-20 shrink-0 flex flex-col items-center py-2 px-1 border-r border-rach-border cursor-pointer transition-colors ${
+      className={`w-24 shrink-0 flex flex-col items-center py-2 px-1 border-r border-rach-border cursor-pointer transition-colors ${
         isSelected ? 'bg-rach-surface-light' : 'bg-rach-surface'
       }`}
       onClick={() => selectTrack(track.id)}
     >
       {/* Track name */}
-      <div className="text-[10px] text-rach-text truncate w-full text-center mb-2">
+      <div className="text-[10px] text-rach-text truncate w-full text-center mb-1">
         {track.name}
       </div>
 
+      {/* Effect Rack */}
+      <div className="w-full mb-1 max-h-20 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <EffectRack trackId={track.id} effects={track.effects} />
+      </div>
+
+      {/* Send Panel (only for non-bus tracks) */}
+      {track.type !== 'bus' && (
+        <div className="w-full mb-1" onClick={(e) => e.stopPropagation()}>
+          <SendPanel track={track} />
+        </div>
+      )}
+
       {/* Volume fader + VU meter */}
-      <div className="flex-1 flex items-center justify-center gap-1 w-full mb-2">
-        <div className="relative w-4 h-28 bg-rach-bg rounded">
+      <div className="flex-1 flex items-center justify-center gap-1 w-full mb-1">
+        <div className="relative w-4 h-20 bg-rach-bg rounded">
           <div
             className="absolute bottom-0 w-full rounded-b transition-all"
             style={{
@@ -64,7 +78,7 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
       </div>
 
       {/* Pan control */}
-      <div className="flex items-center gap-0.5 mb-2">
+      <div className="flex items-center gap-0.5 mb-1">
         <input
           type="range"
           min={-100}
@@ -113,7 +127,7 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
       </div>
 
       {/* Color indicator */}
-      <div className="w-full h-1 mt-2 rounded" style={{ backgroundColor: color }} />
+      <div className="w-full h-1 mt-1 rounded" style={{ backgroundColor: color }} />
     </div>
   );
 }

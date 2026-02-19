@@ -105,6 +105,13 @@ export class AudioEngine {
     return this.trackNodes.get(trackId);
   }
 
+  /** Get the chain insertion points for effect insertion between inputNode and gainNode. */
+  getTrackChainPoints(trackId: string): { inputNode: GainNode; gainNode: GainNode } | undefined {
+    const node = this.trackNodes.get(trackId);
+    if (!node) return undefined;
+    return { inputNode: node.inputNode, gainNode: node.gainNode };
+  }
+
   dispose(): void {
     this.trackNodes.forEach((node) => {
       node.inputNode.disconnect();

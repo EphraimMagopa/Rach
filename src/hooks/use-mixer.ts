@@ -1,12 +1,28 @@
-import { useEffect } from 'react';
-import { useProjectStore } from '@/stores/project-store';
-import { AudioEngine } from '@/core/audio/audio-engine';
+import { useEffect, useRef } from 'react';
+import { useProjectStore } from '../stores/project-store';
+import { AudioEngine } from '../core/audio/audio-engine';
+import { RoutingEngine } from '../core/audio/routing-engine';
+
+let sharedRoutingEngine: RoutingEngine | null = null;
+
+export function getRoutingEngine(): RoutingEngine | null {
+  return sharedRoutingEngine;
+}
 
 /**
  * Bridge hook: pushes track volume/pan/mute/solo changes to AudioEngine nodes.
- * Handles solo logic: when any track is soloed, mute all non-soloed tracks.
+ * Also manages send/return routing via RoutingEngine.
  */
 export function useMixer(audioEngine: AudioEngine): void {
+  const routingRef = useRef<RoutingEngine | null>(null);
+
+  if (!routingRef.current) {
+    routingRef.current = new RoutingEngine(audioEngine);
+    sharedRoutingEngine = routingRef.current;
+  }
+
+  const routing = routingRef.current;
+
   useEffect(() => {
     const unsub = useProjectStore.subscribe((state, prevState) => {
       if (!audioEngine.isInitialized) return;
@@ -51,6 +67,44 @@ export function useMixer(audioEngine: AudioEngine): void {
         if (!prevTrack || track.pan !== prevTrack.pan) {
           audioEngine.setTrackPan(track.id, track.pan);
         }
+
+        // Handle sends changes
+        const sends = track.sends ?? [];
+        const prevSends = prevTrack?.sends ?? [];
+        if (sends !== prevSends) {
+          // Find removed sends
+          for (const prevSend of prevSends) {
+            if (!sends.find((s) => s.id === prevSend.id)) {
+              routing.removeSend(prevSend.id);
+            }
+          }
+          // Update/add sends
+          for (const send of sends) {
+            const prevSend = prevSends.find((s) => s.id === send.id);
+            if (!prevSend || send !== prevSend) {
+              routing.updateSend(send, track.id);
+            }
+          }
+        }
+
+        // Handle output routing changes
+        if (!prevTrack || track.output !== prevTrack.output) {
+          if (track.output.type === 'bus' && track.output.targetId) {
+            routing.routeTrackOutput(track.id, track.output.targetId);
+          } else {
+            routing.routeTrackOutput(track.id, null);
+          }
+        }
+      }
+
+      // Handle removed tracks — clean up sends
+      for (const prevTrack of prevTracks) {
+        if (!tracks.find((t) => t.id === prevTrack.id)) {
+          const prevSends = prevTrack.sends ?? [];
+          for (const send of prevSends) {
+            routing.removeSend(send.id);
+          }
+        }
       }
 
       // Master bus volume
@@ -62,5 +116,5 @@ export function useMixer(audioEngine: AudioEngine): void {
     return () => {
       unsub();
     };
-  }, [audioEngine]);
+  }, [audioEngine, routing]);
 }

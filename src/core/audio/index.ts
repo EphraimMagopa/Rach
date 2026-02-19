@@ -5,3 +5,4 @@ export { Metronome } from './metronome';
 export { AudioRecorder } from './audio-recorder';
 export { AudioFileManager } from './audio-file-manager';
 export { TrackInstrumentManager } from './track-instrument-manager';
+export { RoutingEngine } from './routing-engine';

@@ -1,4 +1,4 @@
-import type { MIDINote } from '@/core/models';
+import type { MIDINote } from '../../core/models';
 
 interface VelocityLaneProps {
   notes: MIDINote[];

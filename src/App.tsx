@@ -1,10 +1,11 @@
 import { useEffect, useCallback, useState } from 'react';
-import { MainLayout } from '@/components/Layout/MainLayout';
-import { useAudioEngine } from '@/hooks/use-audio-engine';
-import { useTransport } from '@/hooks/use-transport';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
-import { useMixer } from '@/hooks/use-mixer';
-import { useProjectPersistence } from '@/hooks/use-project-persistence';
+import { MainLayout } from './components/Layout/MainLayout';
+import { useAudioEngine } from './hooks/use-audio-engine';
+import { useTransport } from './hooks/use-transport';
+import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
+import { useMixer } from './hooks/use-mixer';
+import { useEffects } from './hooks/use-effects';
+import { useProjectPersistence } from './hooks/use-project-persistence';
 import * as Tone from 'tone';
 
 function App(): React.JSX.Element {
@@ -15,6 +16,7 @@ function App(): React.JSX.Element {
   useTransport(audioEngine);
   useKeyboardShortcuts();
   useMixer(audioEngine);
+  useEffects(audioEngine);
   useProjectPersistence();
 
   const handleUserGesture = useCallback(async () => {

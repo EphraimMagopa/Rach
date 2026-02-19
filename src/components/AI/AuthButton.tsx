@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { LogIn, LogOut } from 'lucide-react';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '../../stores/auth-store';
 
 export function AuthButton(): React.JSX.Element {
   const { status, setTokens, clearTokens, setStatus, setError } = useAuthStore();

@@ -1,6 +1,7 @@
 import type { Clip } from './clip';
 import type { EffectInstance } from './effects';
 import type { AutomationLane } from './automation';
+import type { Send } from './send';
 
 export type TrackType = 'audio' | 'midi' | 'instrument' | 'bus';
 
@@ -46,6 +47,8 @@ export interface Track {
   automationLanes: AutomationLane[];
   input: TrackInput;
   output: TrackOutput;
+  /** Aux sends to bus tracks (Phase 2) */
+  sends?: Send[];
   /** Synth type for MIDI/instrument tracks */
   instrumentType?: import('../synths/synth-interface').SynthType;
 }

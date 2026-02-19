@@ -3,6 +3,8 @@ import { create } from 'zustand';
 export type ToolMode = 'select' | 'draw' | 'slice' | 'erase' | 'mute';
 export type PanelId = 'mixer' | 'pianoRoll' | 'ai';
 
+export type ActiveView = 'timeline' | 'session';
+
 interface UIState {
   zoomX: number;
   zoomY: number;
@@ -12,6 +14,8 @@ interface UIState {
   panelVisibility: Record<PanelId, boolean>;
   snapEnabled: boolean;
   snapGridSize: number;
+  automationVisibility: Record<string, boolean>;  // trackId → visible
+  activeView: ActiveView;
 
   setZoomX: (zoom: number) => void;
   setZoomY: (zoom: number) => void;
@@ -21,6 +25,8 @@ interface UIState {
   setPanelVisibility: (panel: PanelId, visible: boolean) => void;
   toggleSnap: () => void;
   setSnapGridSize: (size: number) => void;
+  toggleAutomationLane: (trackId: string) => void;
+  setActiveView: (view: ActiveView) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -36,6 +42,8 @@ export const useUIStore = create<UIState>((set) => ({
   },
   snapEnabled: true,
   snapGridSize: 0.25,
+  automationVisibility: {},
+  activeView: 'timeline',
 
   setZoomX: (zoomX) => set({ zoomX }),
   setZoomY: (zoomY) => set({ zoomY }),
@@ -57,4 +65,12 @@ export const useUIStore = create<UIState>((set) => ({
     })),
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
   setSnapGridSize: (snapGridSize) => set({ snapGridSize }),
+  toggleAutomationLane: (trackId) =>
+    set((state) => ({
+      automationVisibility: {
+        ...state.automationVisibility,
+        [trackId]: !state.automationVisibility[trackId],
+      },
+    })),
+  setActiveView: (activeView) => set({ activeView }),
 }));

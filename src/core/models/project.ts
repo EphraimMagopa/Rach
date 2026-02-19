@@ -1,4 +1,6 @@
 import type { Track } from './track';
+import type { SessionView } from './session';
+import { createDefaultSessionView } from './session';
 
 export interface TimeSignature {
   numerator: number;
@@ -29,6 +31,7 @@ export interface Project {
   tracks: Track[];
   masterBus: MasterBus;
   durationBeats: number;
+  sessionView?: SessionView;
 }
 
 export function createDefaultProject(): Project {
@@ -48,5 +51,6 @@ export function createDefaultProject(): Project {
     tracks: [],
     masterBus: { volume: 0, pan: 0, effects: [] },
     durationBeats: 0,
+    sessionView: createDefaultSessionView(),
   };
 }

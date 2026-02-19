@@ -1,11 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useProjectStore } from '@/stores/project-store';
-import { useUIStore } from '@/stores/ui-store';
-import { useTransportStore } from '@/stores/transport-store';
+import { useProjectStore } from '../../stores/project-store';
+import { useUIStore } from '../../stores/ui-store';
+import { useTransportStore } from '../../stores/transport-store';
 import { PianoKeys, buildKeyList } from './PianoKeys';
 import { NoteBlock } from './NoteBlock';
 import { VelocityLane } from './VelocityLane';
-import type { Clip, MIDINote } from '@/core/models';
+import type { Clip, MIDINote } from '../../core/models';
 
 const ROW_HEIGHT = 14;
 

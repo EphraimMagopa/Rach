@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useProjectStore } from '@/stores/project-store';
-import { useUIStore } from '@/stores/ui-store';
-import { useAudioEngine } from '@/hooks/use-audio-engine';
+import { useProjectStore } from '../../stores/project-store';
+import { useUIStore } from '../../stores/ui-store';
+import { useAudioEngine } from '../../hooks/use-audio-engine';
 import { MixerStrip } from './MixerStrip';
 import { VUMeter } from './VUMeter';
 

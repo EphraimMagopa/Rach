@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { getAudioFileManager } from '@/core/audio/audio-file-manager';
+import { getAudioFileManager } from '../../core/audio/audio-file-manager';
 
 interface WaveformViewProps {
   fileId: string;

@@ -1,29 +1,32 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { useProjectStore } from '@/stores/project-store';
-import { useUIStore } from '@/stores/ui-store';
-import { useTransportStore } from '@/stores/transport-store';
+import { useProjectStore } from '../../stores/project-store';
+import { useUIStore } from '../../stores/ui-store';
+import { useTransportStore } from '../../stores/transport-store';
 import { TimelineRuler } from './TimelineRuler';
 import { TrackHeader } from './TrackHeader';
 import { ClipView } from './ClipView';
 import { Playhead } from './Playhead';
-import type { Track, TrackColor, Clip } from '@/core/models';
-import type { SynthType } from '@/core/synths/synth-interface';
-import { TRACK_COLOR_MAP } from '@/core/models';
-import { TimePosition } from '@/core/models/time-position';
-import { getInstrumentManager } from '@/hooks/use-transport';
-import { useAudioEngine } from '@/hooks/use-audio-engine';
-import { getAudioFileManager } from '@/core/audio/audio-file-manager';
+import { AutomationLane as AutomationLaneView } from './AutomationLane';
+import { AutomationLaneHeader } from './AutomationLaneHeader';
+import type { Track, TrackColor, Clip } from '../../core/models';
+import type { SynthType } from '../../core/synths/synth-interface';
+import { TRACK_COLOR_MAP } from '../../core/models';
+import { TimePosition } from '../../core/models/time-position';
+import { getInstrumentManager } from '../../hooks/use-transport';
+import { useAudioEngine } from '../../hooks/use-audio-engine';
+import { getAudioFileManager } from '../../core/audio/audio-file-manager';
 
 const TRACK_COLORS: TrackColor[] = ['blue', 'green', 'orange', 'purple', 'cyan', 'red', 'yellow', 'pink'];
 const TRACK_HEADER_WIDTH = 180;
 
-function createTrack(type: 'audio' | 'midi', index: number): Track {
+function createTrack(type: 'audio' | 'midi' | 'bus', index: number): Track {
   const defaultSynth: SynthType = 'rach-pad';
+  const nameMap = { audio: 'Audio', midi: 'MIDI', bus: 'Bus' };
   return {
     id: crypto.randomUUID(),
-    name: `${type === 'audio' ? 'Audio' : 'MIDI'} ${index + 1}`,
-    type,
+    name: `${nameMap[type]} ${index + 1}`,
+    type: type === 'bus' ? 'bus' : type,
     color: TRACK_COLORS[index % TRACK_COLORS.length],
     volume: 0,
     pan: 0,
@@ -58,7 +61,7 @@ function createEmptyClip(trackId: string, startBeat: number, color: string): Cli
 
 export function Timeline(): React.JSX.Element {
   const { project, addTrack, addClip, selectClip, selectTrack } = useProjectStore();
-  const { zoomX, setScroll, toolMode } = useUIStore();
+  const { zoomX, setScroll, toolMode, automationVisibility } = useUIStore();
   const timeSignature = useTransportStore((s) => s.timeSignature);
   const { engine: audioEngine } = useAudioEngine();
   const tracks = project.tracks;
@@ -80,7 +83,7 @@ export function Timeline(): React.JSX.Element {
 
   // When a new track is added, create audio node + assign synth
   const handleAddTrack = useCallback(
-    (type: 'audio' | 'midi') => {
+    (type: 'audio' | 'midi' | 'bus') => {
       const track = createTrack(type, tracks.length);
       addTrack(track);
 
@@ -241,38 +244,66 @@ export function Timeline(): React.JSX.Element {
         onScroll={handleScroll}
       >
         <div className="flex flex-col">
-          {tracks.map((track) => (
-            <div key={track.id} className="flex">
-              {/* Header */}
-              <div
-                className="shrink-0 border-r border-rach-border sticky left-0 z-10"
-                style={{ width: TRACK_HEADER_WIDTH }}
-              >
-                <TrackHeader track={track} onSynthChange={handleSynthChange} />
-              </div>
-              {/* Track lane */}
-              <div
-                className="h-16 border-b border-rach-border relative"
-                style={{ width: gridWidth }}
-                onClick={(e) => handleLaneClick(e, track)}
-                onDrop={(e) => handleDrop(e, track)}
-                onDragOver={handleDragOver}
-              >
-                {/* Grid lines */}
-                {Array.from({ length: totalBars }, (_, i) => (
+          {tracks.map((track) => {
+            const showAutomation = automationVisibility[track.id] ?? false;
+            return (
+              <div key={track.id}>
+                <div className="flex">
+                  {/* Header */}
                   <div
-                    key={i}
-                    className="absolute top-0 h-full border-r border-rach-border/30"
-                    style={{ left: i * barWidth }}
-                  />
-                ))}
-                {/* Clips */}
-                {track.clips.map((clip) => (
-                  <ClipView key={clip.id} clip={clip} trackId={track.id} />
+                    className="shrink-0 border-r border-rach-border sticky left-0 z-10"
+                    style={{ width: TRACK_HEADER_WIDTH }}
+                  >
+                    <TrackHeader track={track} onSynthChange={handleSynthChange} />
+                  </div>
+                  {/* Track lane */}
+                  <div
+                    className="h-16 border-b border-rach-border relative"
+                    style={{ width: gridWidth }}
+                    onClick={(e) => handleLaneClick(e, track)}
+                    onDrop={(e) => handleDrop(e, track)}
+                    onDragOver={handleDragOver}
+                  >
+                    {/* Grid lines */}
+                    {Array.from({ length: totalBars }, (_, i) => (
+                      <div
+                        key={i}
+                        className="absolute top-0 h-full border-r border-rach-border/30"
+                        style={{ left: i * barWidth }}
+                      />
+                    ))}
+                    {/* Clips */}
+                    {track.clips.map((clip) => (
+                      <ClipView key={clip.id} clip={clip} trackId={track.id} />
+                    ))}
+                  </div>
+                </div>
+                {/* Automation lanes */}
+                {showAutomation && track.automationLanes.map((lane) => (
+                  <div key={lane.id} className="flex">
+                    <div
+                      className="shrink-0 border-r border-rach-border sticky left-0 z-10"
+                      style={{ width: TRACK_HEADER_WIDTH }}
+                    >
+                      <AutomationLaneHeader lane={lane} trackId={track.id} />
+                    </div>
+                    <div
+                      className="border-b border-rach-border/50 bg-rach-bg/30"
+                      style={{ width: gridWidth }}
+                    >
+                      <AutomationLaneView
+                        lane={lane}
+                        trackId={track.id}
+                        barWidth={barWidth}
+                        totalBars={totalBars}
+                        beatsPerBar={beatsPerBar}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Add track buttons */}
           <div className="flex items-center gap-2 p-3" style={{ marginLeft: 0 }}>
@@ -289,6 +320,13 @@ export function Timeline(): React.JSX.Element {
             >
               <Plus size={14} />
               MIDI Track
+            </button>
+            <button
+              onClick={() => handleAddTrack('bus')}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
+            >
+              <Plus size={14} />
+              Bus Track
             </button>
           </div>
         </div>

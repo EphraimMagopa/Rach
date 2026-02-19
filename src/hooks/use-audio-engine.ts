@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
-import { AudioEngine } from '@/core/audio'
+import { AudioEngine } from '../core/audio'
 
 let sharedEngine: AudioEngine | null = null
 

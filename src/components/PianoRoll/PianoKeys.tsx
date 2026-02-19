@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { getInstrumentManager } from '@/hooks/use-transport';
-import { useProjectStore } from '@/stores/project-store';
+import { getInstrumentManager } from '../../hooks/use-transport';
+import { useProjectStore } from '../../stores/project-store';
 
 interface KeyInfo {
   pitch: number;

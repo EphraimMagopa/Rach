@@ -1,10 +1,10 @@
 import { Send, Bot, X } from 'lucide-react';
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useAgentStore } from '@/stores/agent-store';
-import type { AgentType } from '@/stores/agent-store';
-import { useAuthStore } from '@/stores/auth-store';
-import { useProjectStore } from '@/stores/project-store';
-import { useUIStore } from '@/stores/ui-store';
+import { useAgentStore } from '../../stores/agent-store';
+import type { AgentType } from '../../stores/agent-store';
+import { useAuthStore } from '../../stores/auth-store';
+import { useProjectStore } from '../../stores/project-store';
+import { useUIStore } from '../../stores/ui-store';
 import { AuthButton } from './AuthButton';
 
 const AGENTS: { type: AgentType; label: string; description: string }[] = [

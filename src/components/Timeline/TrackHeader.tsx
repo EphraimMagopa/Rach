@@ -1,9 +1,10 @@
-import { Trash2 } from 'lucide-react';
-import type { Track } from '@/core/models';
-import { TRACK_COLOR_MAP } from '@/core/models';
-import { useProjectStore } from '@/stores/project-store';
-import { ALL_SYNTH_TYPES, SYNTH_LABELS } from '@/core/synths/synth-factory';
-import type { SynthType } from '@/core/synths/synth-interface';
+import { Trash2, Activity } from 'lucide-react';
+import type { Track } from '../../core/models';
+import { TRACK_COLOR_MAP } from '../../core/models';
+import { useProjectStore } from '../../stores/project-store';
+import { useUIStore } from '../../stores/ui-store';
+import { ALL_SYNTH_TYPES, SYNTH_LABELS } from '../../core/synths/synth-factory';
+import type { SynthType } from '../../core/synths/synth-interface';
 
 interface TrackHeaderProps {
   track: Track;
@@ -11,8 +12,10 @@ interface TrackHeaderProps {
 }
 
 export function TrackHeader({ track, onSynthChange }: TrackHeaderProps): React.JSX.Element {
-  const { selectedTrackId, selectTrack, updateTrack, removeTrack } = useProjectStore();
+  const { selectedTrackId, selectTrack, updateTrack, removeTrack, addAutomationLane } = useProjectStore();
+  const { automationVisibility, toggleAutomationLane } = useUIStore();
   const isSelected = selectedTrackId === track.id;
+  const showAutomation = automationVisibility[track.id] ?? false;
   const color = TRACK_COLOR_MAP[track.color];
   const isMidiTrack = track.type === 'midi' || track.type === 'instrument';
 
@@ -97,6 +100,29 @@ export function TrackHeader({ track, onSynthChange }: TrackHeaderProps): React.J
           title="Record Arm"
         >
           R
+        </button>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleAutomationLane(track.id);
+            // Create default volume lane if none exist
+            if (!showAutomation && track.automationLanes.length === 0) {
+              addAutomationLane(track.id, {
+                id: crypto.randomUUID(),
+                parameter: 'volume',
+                targetId: track.id,
+                points: [],
+                enabled: true,
+              });
+            }
+          }}
+          className={`w-6 h-5 rounded text-[10px] font-bold transition-colors flex items-center justify-center ${
+            showAutomation ? 'text-rach-accent' : 'text-rach-text-muted hover:text-rach-text'
+          }`}
+          title="Toggle Automation"
+        >
+          <Activity size={10} />
         </button>
 
         <button
