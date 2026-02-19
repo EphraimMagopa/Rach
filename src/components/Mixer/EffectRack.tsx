@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, X, ChevronUp, ChevronDown, Power } from 'lucide-react';
 import { useProjectStore } from '../../stores/project-store';
 import { ALL_EFFECT_TYPES, EFFECT_LABELS, EFFECT_CATEGORIES } from '../../core/effects/effect-factory';
@@ -33,6 +34,7 @@ export function EffectRack({ trackId, effects }: EffectRackProps): React.JSX.Ele
   const { addEffect, removeEffect, updateEffect, reorderEffects } = useProjectStore();
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [editingEffectId, setEditingEffectId] = useState<string | null>(null);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const handleAddEffect = (type: EffectType) => {
     const effect = createEffectInstance(type);
@@ -120,8 +122,9 @@ export function EffectRack({ trackId, effects }: EffectRackProps): React.JSX.Ele
       </div>
 
       {/* Add effect button */}
-      <div className="relative mt-1">
+      <div className="mt-1">
         <button
+          ref={addBtnRef}
           onClick={() => setShowAddMenu(!showAddMenu)}
           className="flex items-center gap-0.5 text-[9px] text-rach-text-muted hover:text-rach-text px-1 py-0.5"
         >
@@ -129,25 +132,42 @@ export function EffectRack({ trackId, effects }: EffectRackProps): React.JSX.Ele
           Add Effect
         </button>
 
-        {showAddMenu && (
-          <div className="absolute bottom-full left-0 mb-1 bg-rach-surface border border-rach-border rounded shadow-lg z-50 max-h-48 overflow-y-auto w-40">
-            {(Object.keys(grouped) as EffectCategory[]).map((cat) => (
-              <div key={cat}>
-                <div className="text-[8px] text-rach-text-muted px-2 pt-1.5 pb-0.5 uppercase font-bold sticky top-0 bg-rach-surface">
-                  {CATEGORY_LABELS[cat]}
+        {showAddMenu && createPortal(
+          <>
+            <div className="fixed inset-0 z-[9998]" onClick={() => setShowAddMenu(false)} />
+            <div
+              className="fixed z-[9999] bg-rach-surface border border-rach-border rounded shadow-lg max-h-48 overflow-y-auto w-40"
+              ref={(el) => {
+                if (!el || !addBtnRef.current) return;
+                const rect = addBtnRef.current.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                if (spaceBelow >= 192) {
+                  el.style.top = `${rect.bottom + 4}px`;
+                } else {
+                  el.style.top = `${rect.top - el.offsetHeight - 4}px`;
+                }
+                el.style.left = `${Math.min(rect.left, window.innerWidth - 168)}px`;
+              }}
+            >
+              {(Object.keys(grouped) as EffectCategory[]).map((cat) => (
+                <div key={cat}>
+                  <div className="text-[8px] text-rach-text-muted px-2 pt-1.5 pb-0.5 uppercase font-bold sticky top-0 bg-rach-surface">
+                    {CATEGORY_LABELS[cat]}
+                  </div>
+                  {grouped[cat].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => handleAddEffect(type)}
+                      className="block w-full text-left text-[9px] px-2 py-0.5 text-rach-text hover:bg-rach-surface-light"
+                    >
+                      {EFFECT_LABELS[type]}
+                    </button>
+                  ))}
                 </div>
-                {grouped[cat].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => handleAddEffect(type)}
-                    className="block w-full text-left text-[9px] px-2 py-0.5 text-rach-text hover:bg-rach-surface-light"
-                  >
-                    {EFFECT_LABELS[type]}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>,
+          document.body
         )}
       </div>
     </div>

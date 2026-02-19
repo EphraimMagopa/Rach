@@ -32,7 +32,7 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
       </div>
 
       {/* Effect Rack */}
-      <div className="w-full mb-1 max-h-20 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full mb-1" onClick={(e) => e.stopPropagation()}>
         <EffectRack trackId={track.id} effects={track.effects} />
       </div>
 
