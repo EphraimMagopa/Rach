@@ -6,15 +6,20 @@ export class AudioFileManager {
     this.context = context;
   }
 
-  async decodeFile(file: File): Promise<AudioBuffer> {
+  async decodeFile(file: File): Promise<{ fileId: string; buffer: AudioBuffer }> {
     if (!this.context) throw new Error('AudioFileManager not initialized');
 
+    const fileId = crypto.randomUUID();
     const arrayBuffer = await file.arrayBuffer();
     const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
-    return audioBuffer;
+    this.bufferCache.set(fileId, audioBuffer);
+    return { fileId, buffer: audioBuffer };
   }
 
-  async decodeArrayBuffer(arrayBuffer: ArrayBuffer, cacheKey?: string): Promise<AudioBuffer> {
+  async decodeArrayBuffer(
+    arrayBuffer: ArrayBuffer,
+    cacheKey?: string
+  ): Promise<AudioBuffer> {
     if (!this.context) throw new Error('AudioFileManager not initialized');
 
     const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
@@ -22,6 +27,10 @@ export class AudioFileManager {
       this.bufferCache.set(cacheKey, audioBuffer);
     }
     return audioBuffer;
+  }
+
+  getBuffer(fileId: string): AudioBuffer | undefined {
+    return this.bufferCache.get(fileId);
   }
 
   getCachedBuffer(key: string): AudioBuffer | undefined {
@@ -36,4 +45,13 @@ export class AudioFileManager {
     this.bufferCache.clear();
     this.context = null;
   }
+}
+
+// Singleton
+let sharedFileManager: AudioFileManager | null = null;
+export function getAudioFileManager(): AudioFileManager {
+  if (!sharedFileManager) {
+    sharedFileManager = new AudioFileManager();
+  }
+  return sharedFileManager;
 }

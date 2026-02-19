@@ -2,6 +2,12 @@ import { app, BrowserWindow, Menu, ipcMain, dialog, protocol } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { AuthService } from './services/auth-service'
+import { ClaudeAgentService } from './services/claude-agent-service'
+
+let mainWindow: BrowserWindow | null = null
+const authService = new AuthService()
+const agentService = new ClaudeAgentService(authService)
 
 function createMenu(window: BrowserWindow): Menu {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -151,6 +157,7 @@ function createMenu(window: BrowserWindow): Menu {
 }
 
 function setupIPC(): void {
+  // File operations
   ipcMain.handle('file:open', async () => {
     const result = await dialog.showOpenDialog({
       filters: [{ name: 'Rach Project', extensions: ['rach'] }],
@@ -173,12 +180,59 @@ function setupIPC(): void {
     return result.canceled ? null : result.filePath
   })
 
+  // App info
   ipcMain.handle('app:getVersion', () => app.getVersion())
   ipcMain.handle('app:getPlatform', () => process.platform)
+
+  // Auth IPC
+  ipcMain.handle('auth:startLogin', async () => {
+    try {
+      await authService.startAuthFlow()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('auth:getStatus', () => {
+    return {
+      isAuthenticated: authService.isAuthenticated(),
+      accessToken: authService.getAccessToken()
+    }
+  })
+
+  ipcMain.handle('auth:logout', () => {
+    authService.logout()
+    return { success: true }
+  })
+
+  // Agent IPC
+  ipcMain.handle(
+    'agent:sendMessage',
+    async (
+      _event,
+      agentType: string,
+      conversationId: string,
+      message: string,
+      projectContext?: string
+    ) => {
+      try {
+        const result = await agentService.sendMessage(
+          agentType as 'mixing' | 'composition' | 'arrangement' | 'analysis',
+          conversationId,
+          message,
+          projectContext
+        )
+        return { success: true, ...result }
+      } catch (error) {
+        return { success: false, error: (error as Error).message }
+      }
+    }
+  )
 }
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1024,
@@ -196,7 +250,7 @@ function createWindow(): void {
   Menu.setApplicationMenu(createMenu(mainWindow))
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow!.show()
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -210,8 +264,30 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.rach.daw')
 
   // Register custom protocol for OAuth callback
-  protocol.registerHttpProtocol('rach', () => {
-    // OAuth callback handling will be added later
+  protocol.registerHttpProtocol('rach', (request) => {
+    // Handle OAuth callback
+    if (request.url.includes('oauth/callback')) {
+      authService
+        .handleCallback(request.url)
+        .then((tokens) => {
+          if (mainWindow) {
+            mainWindow.webContents.send('auth:callback', {
+              success: true,
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken,
+              expiresAt: tokens.expiresAt
+            })
+          }
+        })
+        .catch((error) => {
+          if (mainWindow) {
+            mainWindow.webContents.send('auth:callback', {
+              success: false,
+              error: (error as Error).message
+            })
+          }
+        })
+    }
   })
 
   app.on('browser-window-created', (_, window) => {

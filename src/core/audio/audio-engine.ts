@@ -28,6 +28,29 @@ export class AudioEngine {
     this.masterAnalyser.connect(this.context.destination);
   }
 
+  async resumeContext(): Promise<void> {
+    if (this.context && this.context.state === 'suspended') {
+      await this.context.resume();
+    }
+  }
+
+  getMasterGain(): GainNode | null {
+    return this.masterGain;
+  }
+
+  setMasterVolume(db: number): void {
+    if (this.masterGain) {
+      this.masterGain.gain.value = db === -Infinity ? 0 : Math.pow(10, db / 20);
+    }
+  }
+
+  setTrackMute(trackId: string, muted: boolean): void {
+    const node = this.trackNodes.get(trackId);
+    if (node) {
+      node.gainNode.gain.value = muted ? 0 : 1;
+    }
+  }
+
   createTrackNode(trackId: string): TrackAudioNode {
     if (!this.context || !this.masterGain) {
       throw new Error('AudioEngine not initialized');

@@ -46,4 +46,6 @@ export interface Track {
   automationLanes: AutomationLane[];
   input: TrackInput;
   output: TrackOutput;
+  /** Synth type for MIDI/instrument tracks */
+  instrumentType?: import('../synths/synth-interface').SynthType;
 }

@@ -6,6 +6,8 @@ declare global {
     electron?: {
       ipcRenderer: {
         invoke(channel: string, ...args: unknown[]): Promise<unknown>;
+        on(channel: string, listener: (...args: unknown[]) => void): void;
+        removeListener(channel: string, listener: (...args: unknown[]) => void): void;
       };
     };
   }
@@ -19,22 +21,35 @@ export class ProjectPersistence {
     }
   }
 
-  async load(filePath: string): Promise<Project> {
-    if (window.electron?.ipcRenderer) {
-      const json = await window.electron.ipcRenderer.invoke('file:load', filePath);
-      return JSON.parse(json as string) as Project;
-    }
-    throw new Error('Electron IPC not available');
+  async open(): Promise<{ project: Project; path: string } | null> {
+    if (!window.electron?.ipcRenderer) return null;
+
+    const result = await window.electron.ipcRenderer.invoke('file:open') as {
+      path: string;
+      content: string;
+    } | null;
+
+    if (!result) return null;
+    return { project: JSON.parse(result.content) as Project, path: result.path };
   }
 
   async saveAs(project: Project): Promise<string | null> {
-    if (window.electron?.ipcRenderer) {
-      const filePath = await window.electron.ipcRenderer.invoke('file:saveAs');
-      if (filePath) {
-        await this.save(project, filePath as string);
-        return filePath as string;
-      }
+    if (!window.electron?.ipcRenderer) return null;
+
+    const filePath = await window.electron.ipcRenderer.invoke('file:saveAs') as string | null;
+    if (filePath) {
+      await this.save(project, filePath);
+      return filePath;
     }
     return null;
   }
+}
+
+// Singleton
+let sharedPersistence: ProjectPersistence | null = null;
+export function getProjectPersistence(): ProjectPersistence {
+  if (!sharedPersistence) {
+    sharedPersistence = new ProjectPersistence();
+  }
+  return sharedPersistence;
 }

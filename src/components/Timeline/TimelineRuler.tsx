@@ -1,16 +1,38 @@
-import { useTransportStore } from '@/stores/transport-store'
-import { useUIStore } from '@/stores/ui-store'
+import { useCallback } from 'react';
+import { useTransportStore } from '@/stores/transport-store';
+import { useUIStore } from '@/stores/ui-store';
+import { getTransportEngine } from '@/hooks/use-transport';
 
 export function TimelineRuler(): React.JSX.Element {
-  const { timeSignature } = useTransportStore()
-  const { zoomX, scrollX } = useUIStore()
+  const { timeSignature } = useTransportStore();
+  const { zoomX, scrollX } = useUIStore();
 
-  const barWidth = 120 * zoomX
-  const totalBars = 64
-  const beatsPerBar = timeSignature[0]
+  const barWidth = 120 * zoomX;
+  const totalBars = 64;
+  const beatsPerBar = timeSignature[0];
+  const beatWidth = barWidth / beatsPerBar;
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left + scrollX;
+      const beat = x / beatWidth;
+      const quantizedBeat = Math.max(0, Math.round(beat * 4) / 4); // Snap to 16th notes
+
+      useTransportStore.getState().setPlayhead(quantizedBeat);
+      const engine = getTransportEngine();
+      if (engine) {
+        engine.seekTo(quantizedBeat);
+      }
+    },
+    [scrollX, beatWidth]
+  );
 
   return (
-    <div className="h-6 bg-rach-surface border-b border-rach-border relative overflow-hidden">
+    <div
+      className="h-6 bg-rach-surface border-b border-rach-border relative overflow-hidden cursor-pointer"
+      onClick={handleClick}
+    >
       <div
         className="absolute top-0 h-full flex"
         style={{ transform: `translateX(${-scrollX}px)` }}
@@ -36,5 +58,5 @@ export function TimelineRuler(): React.JSX.Element {
         ))}
       </div>
     </div>
-  )
+  );
 }

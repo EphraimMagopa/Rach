@@ -1,12 +1,15 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useProjectStore } from '@/stores/project-store'
-import { useUIStore } from '@/stores/ui-store'
-import { MixerStrip } from './MixerStrip'
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useProjectStore } from '@/stores/project-store';
+import { useUIStore } from '@/stores/ui-store';
+import { useAudioEngine } from '@/hooks/use-audio-engine';
+import { MixerStrip } from './MixerStrip';
+import { VUMeter } from './VUMeter';
 
 export function MixerPanel(): React.JSX.Element {
-  const { project } = useProjectStore()
-  const { panelVisibility, togglePanel } = useUIStore()
-  const isVisible = panelVisibility.mixer
+  const { project } = useProjectStore();
+  const { panelVisibility, togglePanel } = useUIStore();
+  const { engine: audioEngine } = useAudioEngine();
+  const isVisible = panelVisibility.mixer;
 
   return (
     <div className="border-t border-rach-border shrink-0">
@@ -30,19 +33,20 @@ export function MixerPanel(): React.JSX.Element {
               {project.tracks.map((track) => (
                 <MixerStrip key={track.id} track={track} />
               ))}
-              {/* Master strip placeholder */}
+              {/* Master strip */}
               <div className="w-20 shrink-0 flex flex-col items-center py-2 px-1 bg-rach-surface-light border-l-2 border-rach-primary">
                 <div className="text-[10px] text-rach-primary font-bold mb-2">MASTER</div>
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="w-4 h-28 bg-rach-bg rounded">
+                <div className="flex-1 flex items-center justify-center gap-1">
+                  <div className="w-4 h-28 bg-rach-bg rounded relative">
                     <div
-                      className="w-full rounded-b bg-rach-primary/50"
-                      style={{ height: '80%', marginTop: '20%' }}
+                      className="w-full rounded-b bg-rach-primary/50 absolute bottom-0"
+                      style={{ height: '80%' }}
                     />
                   </div>
+                  <VUMeter analyserNode={audioEngine.getMasterAnalyser()} />
                 </div>
                 <div className="text-[10px] text-rach-text-muted tabular-nums mt-1">
-                  0.0 dB
+                  {project.masterBus.volume.toFixed(1)} dB
                 </div>
               </div>
             </>
@@ -50,5 +54,5 @@ export function MixerPanel(): React.JSX.Element {
         </div>
       )}
     </div>
-  )
+  );
 }
