@@ -4,6 +4,8 @@ import { SubtractiveSynth } from './subtractive-synth';
 import { WavetableSynth } from './wavetable-synth';
 import { FMSynth } from './fm-synth';
 import { GranularSynth } from './granular-synth';
+import { PluckSynth } from './pluck-synth';
+import { OrganSynth } from './organ-synth';
 
 export function createSynth(type: SynthType): RachSynthInstance {
   switch (type) {
@@ -17,6 +19,10 @@ export function createSynth(type: SynthType): RachSynthInstance {
       return new FMSynth();
     case 'granular':
       return new GranularSynth();
+    case 'pluck':
+      return new PluckSynth();
+    case 'organ':
+      return new OrganSynth();
   }
 }
 
@@ -26,6 +32,8 @@ export const SYNTH_LABELS: Record<SynthType, string> = {
   'wavetable': 'Wavetable',
   'fm': 'FM Synth',
   'granular': 'Granular',
+  'pluck': 'Pluck',
+  'organ': 'Organ',
 };
 
 export const ALL_SYNTH_TYPES: SynthType[] = [
@@ -34,4 +42,6 @@ export const ALL_SYNTH_TYPES: SynthType[] = [
   'wavetable',
   'fm',
   'granular',
+  'pluck',
+  'organ',
 ];

@@ -7,6 +7,7 @@ import type { Project } from '../models/project';
 import type { SynthType } from '../synths/synth-interface';
 import type { TemplateMetadata, ProjectTemplate, TemplateCategory, TemplateDifficulty } from './template-types';
 import { EFFECT_LABELS } from '../effects/effect-factory';
+import { getPresetsForEffect } from '../effects/effect-presets';
 
 /** Shorthand: create a MIDI note */
 export function n(
@@ -98,7 +99,7 @@ export function section(
   };
 }
 
-/** Shorthand: create an EffectInstance with default parameters */
+/** Shorthand: create an EffectInstance with default parameters and built-in presets */
 export function fx(type: EffectType): EffectInstance {
   return {
     id: crypto.randomUUID(),
@@ -106,7 +107,7 @@ export function fx(type: EffectType): EffectInstance {
     name: EFFECT_LABELS[type] ?? type,
     enabled: true,
     parameters: [],
-    presets: [],
+    presets: getPresetsForEffect(type),
   };
 }
 

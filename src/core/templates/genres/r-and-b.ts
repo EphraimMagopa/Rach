@@ -426,6 +426,182 @@ const contemporaryRnB = template(
   }),
 );
 
+// ─── 5. Slow Jam ────────────────────────────────────────────────────────────
+// Key: Gb major, 68 BPM, intimate slow jam with silk-smooth chords
+
+const slowJam = template(
+  meta(
+    'Slow Jam',
+    'r-and-b',
+    'beginner',
+    'Intimate slow jam in Gb major at 68 BPM with silk-smooth maj7 chords, '
+    + 'gentle bass, and a dreamy pad. Perfect for late-night vibes.',
+    16,
+    ['r&b', 'slow-jam', 'intimate', 'smooth', 'late-night'],
+  ),
+  buildTemplateProject({
+    title: 'Slow Jam',
+    genre: 'R&B',
+    tempo: 68,
+    tracks: [
+      // Keys — Gbmaj7 - Ebm7 - Abm7 - Db7
+      t('Keys', 'purple', {
+        instrumentType: 'rach-pad',
+        volume: -4,
+        clips: [
+          midiClip('', 'Slow Keys', 0, 64, [
+            // Gbmaj7: Gb3-Bb3-Db4-F4
+            n(54, 0, 7, 70), n(58, 0, 7, 66), n(61, 0, 7, 68), n(65, 0, 7, 64),
+            // Ebm7: Eb3-Gb3-Bb3-Db4
+            n(51, 8, 7, 70), n(54, 8, 7, 66), n(58, 8, 7, 68), n(61, 8, 7, 64),
+            // Abm7: Ab3-Cb4-Eb4-Gb4
+            n(56, 16, 7, 68), n(59, 16, 7, 64), n(63, 16, 7, 66), n(66, 16, 7, 62),
+            // Db7: Db3-F3-Ab3-Cb4
+            n(49, 24, 7, 72), n(53, 24, 7, 68), n(56, 24, 7, 70), n(59, 24, 7, 66),
+            // Repeat
+            n(54, 32, 7, 68), n(58, 32, 7, 64), n(61, 32, 7, 66), n(65, 32, 7, 62),
+            n(51, 40, 7, 68), n(54, 40, 7, 64), n(58, 40, 7, 66), n(61, 40, 7, 62),
+            n(56, 48, 7, 66), n(59, 48, 7, 62), n(63, 48, 7, 64), n(66, 48, 7, 60),
+            n(49, 56, 7, 70), n(53, 56, 7, 66), n(56, 56, 7, 68), n(59, 56, 7, 64),
+          ], '#9333ea'),
+        ],
+        effects: [fx('reverb-algorithmic'), fx('chorus')],
+      }),
+
+      // Bass — gentle root motion
+      t('Bass', 'red', {
+        instrumentType: 'subtractive',
+        volume: -3,
+        clips: [
+          midiClip('', 'Slow Bass', 0, 64, [
+            n(30, 0, 4, 82), n(30, 4, 4, 78),
+            n(27, 8, 4, 80), n(27, 12, 4, 76),
+            n(32, 16, 4, 82), n(32, 20, 4, 78),
+            n(37, 24, 4, 84), n(37, 28, 4, 80),
+            n(30, 32, 4, 80), n(30, 36, 4, 76),
+            n(27, 40, 4, 78), n(27, 44, 4, 74),
+            n(32, 48, 4, 80), n(32, 52, 4, 76),
+            n(37, 56, 4, 82), n(37, 60, 4, 78),
+          ], '#ef4444'),
+        ],
+        effects: [fx('compressor-vca')],
+      }),
+
+      // Pad — dreamy atmosphere
+      t('Pad', 'cyan', {
+        instrumentType: 'wavetable',
+        volume: -12,
+        clips: [
+          midiClip('', 'Dream Pad', 0, 64, [
+            n(66, 0, 16, 40), n(70, 0, 16, 37), n(73, 0, 16, 35),
+            n(63, 16, 16, 40), n(66, 16, 16, 37), n(70, 16, 16, 35),
+            n(68, 32, 16, 38), n(71, 32, 16, 35), n(75, 32, 16, 33),
+            n(65, 48, 16, 40), n(68, 48, 16, 37), n(72, 48, 16, 35),
+          ], '#06b6d4'),
+        ],
+        effects: [fx('reverb-convolution'), fx('auto-pan')],
+      }),
+    ],
+    sections: [
+      section('Verse', 0, 32, '#9333ea'),
+      section('Chorus', 32, 32, '#ec4899'),
+    ],
+  }),
+);
+
+// ─── 6. Afrobeats R&B ──────────────────────────────────────────────────────
+// Key: A minor, 108 BPM, Afrobeats-influenced R&B with syncopated grooves
+
+const afrobeatsRnB = template(
+  meta(
+    'Afrobeats R&B',
+    'r-and-b',
+    'intermediate',
+    'Afrobeats-influenced R&B in A minor at 108 BPM with syncopated rhythmic patterns, '
+    + 'bright synth melodies, and deep groovy bass. Inspired by Wizkid and Tems.',
+    16,
+    ['r&b', 'afrobeats', 'syncopated', 'groovy', 'bright', 'modern'],
+  ),
+  buildTemplateProject({
+    title: 'Afrobeats R&B',
+    genre: 'R&B',
+    tempo: 108,
+    tracks: [
+      // Synth — bright melodic pattern
+      t('Synth', 'cyan', {
+        instrumentType: 'wavetable',
+        volume: -5,
+        pan: 20,
+        clips: [
+          midiClip('', 'Afro Melody', 0, 32, [
+            n(69, 0, 0.5, 82), n(72, 0.75, 0.5, 78), n(76, 1.5, 1, 85),
+            n(72, 3, 0.5, 78), n(69, 3.75, 0.75, 80),
+            n(67, 4, 0.5, 80), n(69, 4.75, 0.5, 78), n(72, 5.5, 1.5, 85),
+            n(76, 8, 0.5, 82), n(74, 8.75, 0.5, 78), n(72, 9.5, 1, 80),
+            n(69, 11, 0.5, 78), n(67, 11.75, 0.75, 76),
+            n(64, 12.5, 1, 82), n(67, 14, 1.5, 80),
+          ], '#06b6d4'),
+          midiClip('', 'Afro Melody B', 32, 32, [
+            n(72, 0, 0.5, 85), n(76, 0.75, 0.5, 82), n(79, 1.5, 1, 88),
+            n(76, 3, 0.5, 82), n(72, 3.75, 0.75, 84),
+            n(69, 4, 0.5, 82), n(72, 4.75, 0.5, 80), n(76, 5.5, 1.5, 88),
+            n(79, 8, 0.5, 85), n(76, 8.75, 0.5, 82), n(72, 9.5, 1, 84),
+            n(69, 11, 1, 82), n(67, 12, 1, 80),
+            n(69, 13.5, 2, 85),
+          ], '#06b6d4'),
+        ],
+        effects: [fx('delay-pingpong'), fx('reverb-algorithmic')],
+      }),
+
+      // Keys — Am7 - Fmaj7 - Dm7 - Em7
+      t('Keys', 'orange', {
+        instrumentType: 'fm',
+        volume: -6,
+        clips: [
+          midiClip('', 'Afro Chords', 0, 32, [
+            n(57, 0, 3.5, 70), n(60, 0, 3.5, 66), n(64, 0, 3.5, 68), n(67, 0, 3.5, 64),
+            n(53, 4, 3.5, 70), n(57, 4, 3.5, 66), n(60, 4, 3.5, 68), n(64, 4, 3.5, 64),
+            n(50, 8, 3.5, 68), n(53, 8, 3.5, 64), n(57, 8, 3.5, 66), n(60, 8, 3.5, 62),
+            n(52, 12, 3.5, 70), n(55, 12, 3.5, 66), n(59, 12, 3.5, 68), n(62, 12, 3.5, 64),
+          ], '#f97316'),
+          midiClip('', 'Afro Chords B', 32, 32, [
+            n(57, 0, 3.5, 74), n(60, 0, 3.5, 70), n(64, 0, 3.5, 72), n(67, 0, 3.5, 68),
+            n(53, 4, 3.5, 74), n(57, 4, 3.5, 70), n(60, 4, 3.5, 72), n(64, 4, 3.5, 68),
+            n(50, 8, 3.5, 72), n(53, 8, 3.5, 68), n(57, 8, 3.5, 70), n(60, 8, 3.5, 66),
+            n(52, 12, 3.5, 74), n(55, 12, 3.5, 70), n(59, 12, 3.5, 72), n(62, 12, 3.5, 68),
+          ], '#f97316'),
+        ],
+        effects: [fx('chorus'), fx('reverb-algorithmic')],
+      }),
+
+      // Bass — syncopated
+      t('Bass', 'red', {
+        instrumentType: 'subtractive',
+        volume: -2,
+        clips: [
+          midiClip('', 'Afro Bass', 0, 32, [
+            n(45, 0, 0.75, 95), n(45, 1.5, 0.5, 80), n(45, 2.5, 0.75, 85),
+            n(41, 4, 0.75, 93), n(41, 5.5, 0.5, 78), n(41, 6.5, 0.75, 83),
+            n(38, 8, 0.75, 95), n(38, 9.5, 0.5, 80), n(38, 10.5, 0.75, 85),
+            n(40, 12, 0.75, 93), n(40, 13.5, 0.5, 78), n(40, 14.5, 0.75, 83),
+          ], '#ef4444'),
+          midiClip('', 'Afro Bass B', 32, 32, [
+            n(45, 0, 0.75, 97), n(45, 1.5, 0.5, 82), n(48, 2.5, 0.75, 88),
+            n(41, 4, 0.75, 95), n(41, 5.5, 0.5, 80), n(45, 6.5, 0.75, 86),
+            n(38, 8, 0.75, 97), n(38, 9.5, 0.5, 82), n(40, 10.5, 0.75, 88),
+            n(40, 12, 0.75, 95), n(40, 13.5, 0.5, 80), n(43, 14.5, 0.75, 86),
+          ], '#ef4444'),
+        ],
+        effects: [fx('compressor-vca')],
+      }),
+    ],
+    sections: [
+      section('Verse', 0, 32, '#06b6d4'),
+      section('Chorus', 32, 32, '#f97316'),
+    ],
+  }),
+);
+
 // ─── Export ─────────────────────────────────────────────────────────────────────
 
 export const rAndBTemplates: ProjectTemplate[] = [
@@ -433,4 +609,6 @@ export const rAndBTemplates: ProjectTemplate[] = [
   neoSoul,
   classicSoul,
   contemporaryRnB,
+  slowJam,
+  afrobeatsRnB,
 ];

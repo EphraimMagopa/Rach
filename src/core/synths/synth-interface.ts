@@ -3,7 +3,9 @@ export type SynthType =
   | 'subtractive'
   | 'wavetable'
   | 'fm'
-  | 'granular';
+  | 'granular'
+  | 'pluck'
+  | 'organ';
 
 export interface SynthParameter {
   name: string;

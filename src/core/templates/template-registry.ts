@@ -11,6 +11,9 @@ import { cinematicTemplates } from './genres/cinematic';
 import { rAndBTemplates } from './genres/r-and-b';
 import { loFiTemplates } from './genres/lo-fi';
 import { otherTemplates } from './genres/other';
+import { soulTemplates } from './genres/soul';
+import { metalTemplates } from './genres/metal';
+import { reggaeTemplates } from './genres/reggae';
 
 export const ALL_TEMPLATES: ProjectTemplate[] = [
   ...popTemplates,
@@ -24,6 +27,9 @@ export const ALL_TEMPLATES: ProjectTemplate[] = [
   ...cinematicTemplates,
   ...loFiTemplates,
   ...otherTemplates,
+  ...soulTemplates,
+  ...metalTemplates,
+  ...reggaeTemplates,
 ];
 
 /** All categories that have at least one template */

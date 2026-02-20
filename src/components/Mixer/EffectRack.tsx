@@ -4,6 +4,7 @@ import { Plus, X, ChevronUp, ChevronDown, Power } from 'lucide-react';
 import { useProjectStore } from '../../stores/project-store';
 import { ALL_EFFECT_TYPES, EFFECT_LABELS, EFFECT_CATEGORIES } from '../../core/effects/effect-factory';
 import type { EffectType, EffectInstance } from '../../core/models/effects';
+import { getPresetsForEffect } from '../../core/effects/effect-presets';
 import { EffectParameterEditor } from './EffectParameterEditor';
 import type { EffectCategory } from '../../core/effects/effect-interface';
 
@@ -19,7 +20,7 @@ function createEffectInstance(type: EffectType): EffectInstance {
     name: EFFECT_LABELS[type] ?? type,
     enabled: true,
     parameters: [],
-    presets: [],
+    presets: getPresetsForEffect(type),
   };
 }
 

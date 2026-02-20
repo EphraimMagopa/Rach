@@ -336,6 +336,136 @@ const loFiJazzProject = buildTemplateProject({
 });
 
 // ---------------------------------------------------------------------------
+// 4. Lo-Fi Bedroom — dreamy, nostalgic, tape-saturated
+// ---------------------------------------------------------------------------
+
+const loFiBedroomMeta = meta(
+  'Lo-Fi Bedroom',
+  'lo-fi',
+  'beginner',
+  'Dreamy, nostalgic bedroom pop vibes in Db major with gentle arpeggios, warm sub bass, and cassette-style saturation. Perfect for late-night production sessions.',
+  16,
+  ['lo-fi', 'bedroom', 'dreamy', 'nostalgic', 'tape', 'arpeggio'],
+);
+
+const loFiBedroomPianoClip = midiClip('', 'Dreamy Arp', 0, 64, [
+  // Dbmaj7 arpeggio: Db4-F4-Ab4-C5
+  n(61, 0, 1.5, 72), n(65, 1.5, 1.5, 68), n(68, 3, 1.5, 70), n(72, 4.5, 1.5, 66),
+  // Bbm7: Bb3-Db4-F4-Ab4
+  n(58, 8, 1.5, 70), n(61, 9.5, 1.5, 66), n(65, 11, 1.5, 68), n(68, 12.5, 1.5, 64),
+  // Gbmaj7: Gb3-Bb3-Db4-F4
+  n(54, 16, 1.5, 72), n(58, 17.5, 1.5, 68), n(61, 19, 1.5, 70), n(65, 20.5, 1.5, 66),
+  // Ab7: Ab3-C4-Eb4-Gb4
+  n(56, 24, 1.5, 71), n(60, 25.5, 1.5, 67), n(63, 27, 1.5, 69), n(66, 28.5, 1.5, 65),
+  // Repeat with softer dynamics
+  n(61, 32, 1.5, 68), n(65, 33.5, 1.5, 64), n(68, 35, 1.5, 66), n(72, 36.5, 1.5, 62),
+  n(58, 40, 1.5, 66), n(61, 41.5, 1.5, 62), n(65, 43, 1.5, 64), n(68, 44.5, 1.5, 60),
+  n(54, 48, 1.5, 68), n(58, 49.5, 1.5, 64), n(61, 51, 1.5, 66), n(65, 52.5, 1.5, 62),
+  n(56, 56, 1.5, 67), n(60, 57.5, 1.5, 63), n(63, 59, 1.5, 65), n(66, 60.5, 1.5, 61),
+]);
+
+const loFiBedroomBassClip = midiClip('', 'Sub Bass', 0, 64, [
+  n(37, 0, 4, 80), n(37, 4, 4, 76),
+  n(34, 8, 4, 78), n(34, 12, 4, 74),
+  n(30, 16, 4, 80), n(30, 20, 4, 76),
+  n(32, 24, 4, 79), n(32, 28, 4, 75),
+  n(37, 32, 4, 78), n(37, 36, 4, 74),
+  n(34, 40, 4, 76), n(34, 44, 4, 72),
+  n(30, 48, 4, 78), n(30, 52, 4, 74),
+  n(32, 56, 4, 77), n(32, 60, 4, 73),
+]);
+
+const loFiBedroomProject = buildTemplateProject({
+  title: 'Lo-Fi Bedroom',
+  genre: 'Lo-Fi',
+  tempo: 78,
+  tracks: [
+    t('Keys', 'purple', {
+      instrumentType: 'rach-pad',
+      volume: -4,
+      clips: [loFiBedroomPianoClip],
+      effects: [fx('delay-tape'), fx('reverb-algorithmic'), fx('chorus')],
+    }),
+    t('Bass', 'red', {
+      instrumentType: 'subtractive',
+      volume: -5,
+      clips: [loFiBedroomBassClip],
+      effects: [fx('highlow-pass'), fx('compressor-vca')],
+    }),
+  ],
+  sections: [
+    section('Dream A', 0, 32, '#9333ea'),
+    section('Dream B', 32, 32, '#7c3aed'),
+  ],
+});
+
+// ---------------------------------------------------------------------------
+// 5. Lo-Fi Rain — melancholic Eb minor with granular rain textures
+// ---------------------------------------------------------------------------
+
+const loFiRainMeta = meta(
+  'Lo-Fi Rain',
+  'lo-fi',
+  'intermediate',
+  'Melancholic lo-fi in Eb minor with soft piano chords, granular rain-like textures, and atmospheric reverb washes. Evokes rainy evenings and quiet contemplation.',
+  16,
+  ['lo-fi', 'rain', 'melancholic', 'atmospheric', 'piano', 'granular'],
+);
+
+const loFiRainPianoClip = midiClip('', 'Rain Chords', 0, 64, [
+  // Ebm7: Eb3-Gb3-Bb3-Db4
+  n(51, 0, 7, 74), n(54, 0, 7, 70), n(58, 0, 7, 72), n(61, 0, 7, 68),
+  // Cb maj7: Cb3-Eb3-Gb3-Bb3
+  n(47, 8, 7, 72), n(51, 8, 7, 68), n(54, 8, 7, 70), n(58, 8, 7, 66),
+  // Abm7: Ab2-Cb3-Eb3-Gb3
+  n(44, 16, 7, 73), n(47, 16, 7, 69), n(51, 16, 7, 71), n(54, 16, 7, 67),
+  // Bb7: Bb2-D3-F3-Ab3
+  n(46, 24, 7, 75), n(50, 24, 7, 71), n(53, 24, 7, 73), n(56, 24, 7, 69),
+  // Repeat softer
+  n(51, 32, 7, 70), n(54, 32, 7, 66), n(58, 32, 7, 68), n(61, 32, 7, 64),
+  n(47, 40, 7, 68), n(51, 40, 7, 64), n(54, 40, 7, 66), n(58, 40, 7, 62),
+  n(44, 48, 7, 70), n(47, 48, 7, 66), n(51, 48, 7, 68), n(54, 48, 7, 64),
+  n(46, 56, 7, 72), n(50, 56, 7, 68), n(53, 56, 7, 70), n(56, 56, 7, 66),
+]);
+
+const loFiRainTextureClip = midiClip('', 'Rain Texture', 0, 64, [
+  // Sparse, high-register granular — rain drops
+  n(90, 2, 1, 30), n(86, 5, 1.5, 28), n(92, 9, 0.5, 25),
+  n(88, 14, 2, 32), n(84, 18, 1, 27), n(91, 22, 0.5, 24),
+  n(87, 26, 1.5, 30), n(93, 31, 0.5, 22),
+  n(89, 34, 1, 28), n(85, 38, 2, 30), n(91, 42, 0.5, 25),
+  n(88, 46, 1.5, 28), n(86, 50, 1, 26), n(92, 54, 0.5, 23),
+  n(90, 58, 2, 30), n(84, 62, 1, 27),
+]);
+
+const loFiRainProject = buildTemplateProject({
+  title: 'Lo-Fi Rain',
+  genre: 'Lo-Fi',
+  tempo: 70,
+  tracks: [
+    t('Piano', 'blue', {
+      instrumentType: 'rach-pad',
+      volume: -4,
+      clips: [loFiRainPianoClip],
+      effects: [fx('reverb-convolution'), fx('delay-tape'), fx('highlow-pass')],
+    }),
+    t('Rain', 'cyan', {
+      instrumentType: 'granular',
+      volume: -10,
+      pan: 20,
+      clips: [loFiRainTextureClip],
+      effects: [fx('reverb-convolution'), fx('delay-pingpong'), fx('highlow-pass')],
+    }),
+  ],
+  sections: [
+    section('Drizzle', 0, 16, '#3b82f6'),
+    section('Downpour', 16, 16, '#2563eb'),
+    section('Clearing', 32, 16, '#60a5fa'),
+    section('Mist', 48, 16, '#3b82f6'),
+  ],
+});
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -343,4 +473,6 @@ export const loFiTemplates: ProjectTemplate[] = [
   template(loFiChillMeta, loFiChillProject),
   template(loFiStudyMeta, loFiStudyProject),
   template(loFiJazzMeta, loFiJazzProject),
+  template(loFiBedroomMeta, loFiBedroomProject),
+  template(loFiRainMeta, loFiRainProject),
 ];

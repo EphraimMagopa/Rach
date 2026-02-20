@@ -1244,7 +1244,7 @@ ANTHROPIC_TOKEN_ENDPOINT=https://auth.anthropic.com/oauth/token
 - [ ] Public release
 - [ ] Marketing campaign
 - [ ] Community Discord
-- [ ] First expansion pack
+- ✅ First expansion pack
 
 ---
 

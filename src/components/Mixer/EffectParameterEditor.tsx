@@ -29,6 +29,14 @@ export function EffectParameterEditor({ trackId, effect }: EffectParameterEditor
     };
   });
 
+  const applyPreset = (presetId: string) => {
+    const preset = effect.presets.find((p) => p.id === presetId);
+    if (!preset) return;
+    for (const [paramName, value] of Object.entries(preset.parameters)) {
+      updateEffectParameter(trackId, effect.id, paramName, value);
+    }
+  };
+
   if (params.length === 0) {
     return (
       <div className="px-1 py-1 text-[8px] text-rach-text-muted italic">
@@ -39,6 +47,18 @@ export function EffectParameterEditor({ trackId, effect }: EffectParameterEditor
 
   return (
     <div className="px-1 py-1 space-y-1 bg-rach-bg/50 rounded-b">
+      {effect.presets.length > 0 && (
+        <select
+          defaultValue=""
+          onChange={(e) => { if (e.target.value) applyPreset(e.target.value); e.target.value = ''; }}
+          className="w-full text-[8px] bg-rach-surface border border-rach-border rounded px-1 py-0.5 text-rach-text"
+        >
+          <option value="" disabled>Presets...</option>
+          {effect.presets.map((preset) => (
+            <option key={preset.id} value={preset.id}>{preset.name}</option>
+          ))}
+        </select>
+      )}
       {params.map((param) => (
         <div key={param.name} className="flex items-center gap-1">
           <label className="text-[8px] text-rach-text-muted w-14 truncate" title={param.name}>

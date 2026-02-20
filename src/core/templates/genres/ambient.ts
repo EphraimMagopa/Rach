@@ -339,6 +339,167 @@ const darkAmbientProject = buildTemplateProject({
   ],
 });
 
+// ── 5. Space Ambient ────────────────────────────────────────────────────────
+// Intermediate · 55 BPM · 32 bars · Cosmic, floating, interstellar atmosphere
+
+const spaceAmbientMeta = meta(
+  'Space Ambient',
+  'ambient',
+  'intermediate',
+  'Cosmic, interstellar soundscape with floating FM bell tones, deep sub drones, and shimmering wavetable textures. Evokes drifting through vast, empty space.',
+  32,
+  ['space', 'cosmic', 'floating', 'bells', 'interstellar', 'vast'],
+);
+
+const spaceAmbientProject = buildTemplateProject({
+  title: 'Space Ambient',
+  genre: 'Ambient',
+  tempo: 55,
+  tracks: [
+    // Bells — sparse FM bell tones, widely spaced
+    t('Bells', 'cyan', {
+      instrumentType: 'fm',
+      volume: -8,
+      pan: 25,
+      effects: [fx('reverb-convolution'), fx('delay-pingpong')],
+      clips: [
+        midiClip('', 'Cosmic Bells', 0, 128, [
+          n(72, 0, 4, 50),    // C5
+          n(79, 8, 4, 45),    // G5
+          n(76, 20, 6, 48),   // E5
+          n(84, 32, 4, 42),   // C6
+          n(71, 44, 8, 50),   // B4
+          n(79, 56, 4, 44),   // G5
+          n(67, 68, 6, 48),   // G4
+          n(76, 80, 4, 42),   // E5
+          n(72, 92, 8, 50),   // C5
+          n(84, 108, 4, 40),  // C6
+          n(79, 120, 8, 46),  // G5
+        ]),
+      ],
+    }),
+    // Drone — deep sub foundation
+    t('Drone', 'purple', {
+      instrumentType: 'rach-pad',
+      volume: -6,
+      effects: [fx('reverb-convolution'), fx('spectral-processing')],
+      clips: [
+        midiClip('', 'Space Drone', 0, 128, [
+          // C2-G2 fifth — vast, open
+          n(36, 0, 64, 65), n(43, 0, 64, 55),
+          // Shift to G2-D3
+          n(43, 56, 40, 65), n(50, 56, 40, 55),
+          // Return to C
+          n(36, 88, 40, 65), n(43, 88, 40, 55),
+        ]),
+      ],
+    }),
+    // Shimmer — high wavetable texture
+    t('Shimmer', 'blue', {
+      instrumentType: 'wavetable',
+      volume: -16,
+      pan: -30,
+      effects: [fx('reverb-convolution'), fx('auto-pan'), fx('delay-pingpong')],
+      clips: [
+        midiClip('', 'Star Dust', 0, 128, [
+          n(96, 0, 16, 25),   // C7 — barely audible sparkle
+          n(91, 16, 12, 22),  // G6
+          n(88, 32, 16, 28),  // E6
+          n(96, 52, 12, 22),  // C7
+          n(93, 68, 16, 25),  // A6
+          n(91, 88, 12, 22),  // G6
+          n(96, 104, 24, 25), // C7 — long fade
+        ]),
+      ],
+    }),
+  ],
+  sections: [
+    section('Launch', 0, 32, '#06b6d4'),
+    section('Drift', 32, 32, '#7c3aed'),
+    section('Void', 64, 32, '#1e3a5f'),
+    section('Return', 96, 32, '#06b6d4'),
+  ],
+});
+
+// ── 6. Generative Ambient ──────────────────────────────────────────────────
+// Advanced · 40 BPM · 32 bars · Algorithmic-feeling sparse minimalism
+
+const generativeAmbientMeta = meta(
+  'Generative Ambient',
+  'ambient',
+  'advanced',
+  'Sparse, minimalist ambient inspired by generative music systems. Irregular note placements, wide dynamic range, and unpredictable timbral shifts. Inspired by Brian Eno\'s ambient works.',
+  32,
+  ['generative', 'minimal', 'eno', 'sparse', 'algorithmic', 'experimental'],
+);
+
+const generativeAmbientProject = buildTemplateProject({
+  title: 'Generative Ambient',
+  genre: 'Ambient',
+  tempo: 40,
+  tracks: [
+    // Layer 1 — FM with irregular note placements
+    t('Tone A', 'green', {
+      instrumentType: 'fm',
+      volume: -10,
+      pan: -40,
+      effects: [fx('reverb-convolution'), fx('delay-pingpong')],
+      clips: [
+        midiClip('', 'Gen A', 0, 128, [
+          n(60, 0, 8, 55),     // C4
+          n(67, 13, 10, 48),   // G4
+          n(64, 28, 6, 52),    // E4
+          n(72, 45, 12, 42),   // C5
+          n(59, 62, 8, 50),    // B3
+          n(65, 78, 10, 45),   // F4
+          n(69, 95, 6, 52),    // A4
+          n(60, 110, 18, 48),  // C4
+        ]),
+      ],
+    }),
+    // Layer 2 — wavetable with different timing
+    t('Tone B', 'blue', {
+      instrumentType: 'wavetable',
+      volume: -12,
+      pan: 35,
+      effects: [fx('reverb-convolution'), fx('auto-pan')],
+      clips: [
+        midiClip('', 'Gen B', 0, 128, [
+          n(76, 5, 12, 40),    // E5
+          n(72, 22, 8, 45),    // C5
+          n(79, 38, 14, 38),   // G5
+          n(74, 58, 10, 42),   // D5
+          n(71, 73, 12, 40),   // B4
+          n(76, 92, 8, 44),    // E5
+          n(84, 112, 16, 35),  // C6
+        ]),
+      ],
+    }),
+    // Layer 3 — deep pad, very slow
+    t('Substrate', 'purple', {
+      instrumentType: 'rach-pad',
+      volume: -14,
+      effects: [fx('reverb-convolution')],
+      clips: [
+        midiClip('', 'Gen Pad', 0, 128, [
+          // C-G open fifth, evolving very slowly
+          n(48, 0, 48, 45), n(55, 0, 48, 40),
+          // Shift to D-A
+          n(50, 40, 48, 45), n(57, 40, 48, 40),
+          // Return to C-G
+          n(48, 80, 48, 45), n(55, 80, 48, 40),
+        ]),
+      ],
+    }),
+  ],
+  sections: [
+    section('Emergence', 0, 32, '#22c55e'),
+    section('Evolution', 32, 32, '#3b82f6'),
+    section('Dissolution', 64, 32, '#7c3aed'),
+    section('Rebirth', 96, 32, '#22c55e'),
+  ],
+});
+
 // ── Export ───────────────────────────────────────────────────────────────────
 
 export const ambientTemplates: ProjectTemplate[] = [
@@ -346,4 +507,6 @@ export const ambientTemplates: ProjectTemplate[] = [
   template(droneMeta, droneProject),
   template(newAgeMeta, newAgeProject),
   template(darkAmbientMeta, darkAmbientProject),
+  template(spaceAmbientMeta, spaceAmbientProject),
+  template(generativeAmbientMeta, generativeAmbientProject),
 ];
