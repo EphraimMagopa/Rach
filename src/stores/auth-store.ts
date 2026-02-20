@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { refreshAccessToken, isTokenExpired } from '../services/oauth-service';
+import { refreshGoogleToken, isTokenExpired } from '../services/google-oauth-service';
 
 export type AuthStatus = 'idle' | 'authenticating' | 'authenticated' | 'error';
 
@@ -64,7 +64,7 @@ function scheduleRefresh(expiresAt: number, store: AuthState): void {
     const { refreshToken } = store;
     if (!refreshToken) return;
     try {
-      const tokens = await refreshAccessToken(refreshToken);
+      const tokens = await refreshGoogleToken(refreshToken);
       store.setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresAt);
     } catch {
       // Refresh failed — user will need to re-authenticate
@@ -121,7 +121,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       scheduleRefresh(tokens.expiresAt, get());
     } else if (tokens.refreshToken) {
       // Token expired but we have a refresh token — try refreshing
-      refreshAccessToken(tokens.refreshToken)
+      refreshGoogleToken(tokens.refreshToken)
         .then((newTokens) => {
           get().setTokens(newTokens.accessToken, newTokens.refreshToken, newTokens.expiresAt);
         })
@@ -144,7 +144,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Try refresh
     if (state.refreshToken) {
       try {
-        const tokens = await refreshAccessToken(state.refreshToken);
+        const tokens = await refreshGoogleToken(state.refreshToken);
         state.setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresAt);
         return tokens.accessToken;
       } catch {

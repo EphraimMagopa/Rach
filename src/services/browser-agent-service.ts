@@ -1,17 +1,46 @@
 /**
  * Browser-side agent service — ports the Electron claude-agent-service + tool-executor
- * to run directly in the browser using the Anthropic SDK with OAuth tokens.
+ * to run directly in the browser using the Gemini API with Google OAuth tokens.
  */
-import Anthropic from '@anthropic-ai/sdk';
 
 // ── Types ──────────────────────────────────────────
 
 export type AgentType = 'mixing' | 'composition' | 'arrangement' | 'analysis';
 
+interface ToolDefinition {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required: string[];
+  };
+}
+
 interface AgentConfig {
   model: string;
   systemPrompt: string;
-  tools: Anthropic.Tool[];
+  tools: ToolDefinition[];
+}
+
+// Gemini API types
+interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args: Record<string, unknown> };
+  functionResponse?: { name: string; response: { result: string } };
+}
+
+interface GeminiContent {
+  role: 'user' | 'model';
+  parts: GeminiPart[];
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content: { role: string; parts: GeminiPart[] };
+    finishReason: string;
+  }>;
+  error?: { message: string; code: number };
 }
 
 interface ProjectContext {
@@ -76,7 +105,7 @@ const MAX_LOOP_ITERATIONS = 10;
 
 const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   mixing: {
-    model: 'claude-opus-4-6',
+    model: 'gemini-2.5-pro',
     systemPrompt: `You are the Rach DAW Mixing Agent. You help users mix their audio projects.
 You can adjust EQ, compression, track levels, panning, and analyze frequency spectrums.
 Be concise and technical. When the user asks you to make changes, use the available tools.
@@ -158,7 +187,7 @@ When referring to tracks, use their exact track ID from the project context.`,
     ],
   },
   composition: {
-    model: 'claude-opus-4-6',
+    model: 'gemini-2.5-pro',
     systemPrompt: `You are the Rach DAW Composition Agent. You help users compose music.
 You can generate chord progressions, create MIDI tracks, and detect musical keys/scales.
 Be creative yet technically grounded. Output MIDI note data when creating musical content.
@@ -219,7 +248,7 @@ When referring to tracks, use their exact track ID from the project context.`,
     ],
   },
   arrangement: {
-    model: 'claude-sonnet-4-6',
+    model: 'gemini-2.5-flash',
     systemPrompt: `You are the Rach DAW Arrangement Agent. You help users arrange songs.
 You can create song sections (intro, verse, chorus, bridge, outro) and suggest arrangements.
 Be practical and focused on song structure.`,
@@ -241,7 +270,7 @@ Be practical and focused on song structure.`,
     ],
   },
   analysis: {
-    model: 'claude-sonnet-4-6',
+    model: 'gemini-2.5-flash',
     systemPrompt: `You are the Rach DAW Analysis Agent. You analyze mixes and projects.
 You provide detailed feedback on levels, frequency balance, dynamics, stereo image, and effects.
 Be analytical and provide actionable suggestions. Structure your response with clear sections.`,
@@ -775,10 +804,97 @@ class ToolExecutor {
   }
 }
 
+// ── Gemini API Helpers ─────────────────────────────
+
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+/** Map JSON Schema types to Gemini's uppercase type names. */
+function toGeminiType(jsonType: string): string {
+  const map: Record<string, string> = {
+    string: 'STRING',
+    number: 'NUMBER',
+    integer: 'INTEGER',
+    boolean: 'BOOLEAN',
+    array: 'ARRAY',
+    object: 'OBJECT',
+  };
+  return map[jsonType] || 'STRING';
+}
+
+/** Recursively convert a JSON Schema property to Gemini's Schema format. */
+function convertSchemaProperty(prop: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  if (prop.type) result.type = toGeminiType(prop.type as string);
+  if (prop.description) result.description = prop.description;
+
+  if (prop.properties) {
+    const props = prop.properties as Record<string, Record<string, unknown>>;
+    const converted: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(props)) {
+      converted[key] = convertSchemaProperty(value);
+    }
+    result.properties = converted;
+  }
+  if (prop.required) result.required = prop.required;
+
+  if (prop.items) {
+    result.items = convertSchemaProperty(prop.items as Record<string, unknown>);
+  }
+
+  return result;
+}
+
+/** Convert our tool definitions to Gemini's functionDeclarations format. */
+function translateToolsToGemini(tools: ToolDefinition[]): object {
+  return {
+    functionDeclarations: tools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: convertSchemaProperty(
+        tool.input_schema as unknown as Record<string, unknown>
+      ),
+    })),
+  };
+}
+
+/** Call the Gemini generateContent API. */
+async function callGeminiAPI(
+  accessToken: string,
+  model: string,
+  systemPrompt: string,
+  tools: ToolDefinition[],
+  contents: GeminiContent[]
+): Promise<GeminiResponse> {
+  const url = `${GEMINI_API_BASE}/${model}:generateContent`;
+
+  const body: Record<string, unknown> = {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    tools: [translateToolsToGemini(tools)],
+    generationConfig: { maxOutputTokens: 4096 },
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${errorText}`);
+  }
+
+  return response.json() as Promise<GeminiResponse>;
+}
+
 // ── Browser Agent Service ──────────────────────────
 
 export class BrowserAgentService {
-  private conversationHistories = new Map<string, Anthropic.MessageParam[]>();
+  private conversationHistories = new Map<string, GeminiContent[]>();
   private toolExecutor = new ToolExecutor();
 
   async sendMessage(
@@ -790,10 +906,6 @@ export class BrowserAgentService {
   ): Promise<AgentResponse> {
     try {
       const config = AGENT_CONFIGS[agentType];
-      const client = new Anthropic({
-        authToken,
-        dangerouslyAllowBrowser: true,
-      });
 
       let parsedContext: ProjectContext = {
         tracks: [],
@@ -810,7 +922,7 @@ export class BrowserAgentService {
       }
 
       const history = this.conversationHistories.get(conversationId) || [];
-      history.push({ role: 'user', content: userMessage });
+      history.push({ role: 'user', parts: [{ text: userMessage }] });
 
       const systemPrompt = projectContext
         ? `${config.systemPrompt}\n\nCurrent project context:\n${projectContext}`
@@ -821,53 +933,70 @@ export class BrowserAgentService {
       const allToolExecutions: ToolExecution[] = [];
 
       for (let iteration = 0; iteration < MAX_LOOP_ITERATIONS; iteration++) {
-        const response = await client.messages.create({
-          model: config.model,
-          max_tokens: 4096,
-          system: systemPrompt,
-          tools: config.tools,
-          messages: history,
-        });
+        const response = await callGeminiAPI(
+          authToken,
+          config.model,
+          systemPrompt,
+          config.tools,
+          history
+        );
 
-        const toolUseBlocks: Anthropic.ToolUseBlock[] = [];
-        for (const block of response.content) {
-          if (block.type === 'text') {
-            accumulatedText += block.text;
-          } else if (block.type === 'tool_use') {
-            toolUseBlocks.push(block);
+        if (response.error) {
+          throw new Error(response.error.message);
+        }
+
+        const candidate = response.candidates?.[0];
+        if (!candidate) {
+          throw new Error('No response from Gemini');
+        }
+
+        const parts = candidate.content.parts || [];
+        const functionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+
+        for (const part of parts) {
+          if (part.text) {
+            accumulatedText += part.text;
+          }
+          if (part.functionCall) {
+            functionCalls.push(part.functionCall);
           }
         }
 
-        history.push({ role: 'assistant', content: response.content });
+        // Add model response to history
+        history.push({ role: 'model', parts });
 
-        if (response.stop_reason !== 'tool_use' || toolUseBlocks.length === 0) {
+        // If no function calls, we're done
+        if (functionCalls.length === 0) {
           break;
         }
 
-        const toolResults: Anthropic.ToolResultBlockParam[] = [];
+        // Execute tools and build function response parts
+        const responseParts: GeminiPart[] = [];
 
-        for (const toolBlock of toolUseBlocks) {
+        for (const fc of functionCalls) {
           const toolResult = this.toolExecutor.execute(
-            toolBlock.name,
-            toolBlock.input as Record<string, unknown>,
+            fc.name,
+            fc.args,
             parsedContext
           );
 
           allMutations.push(...toolResult.mutations);
           allToolExecutions.push({
-            name: toolBlock.name,
-            input: toolBlock.input,
+            name: fc.name,
+            input: fc.args,
             result: toolResult.result,
           });
 
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: toolBlock.id,
-            content: toolResult.result,
+          responseParts.push({
+            functionResponse: {
+              name: fc.name,
+              response: { result: toolResult.result },
+            },
           });
         }
 
-        history.push({ role: 'user', content: toolResults });
+        // Send tool results back as user turn
+        history.push({ role: 'user', parts: responseParts });
       }
 
       this.conversationHistories.set(conversationId, history);

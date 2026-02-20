@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LogIn, LogOut } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth-store';
-import { generatePKCE, getAuthorizationURL, exchangeCodeForTokens } from '../../services/oauth-service';
+import { generatePKCE, getGoogleAuthURL, parseCallbackURL, exchangeGoogleCode } from '../../services/google-oauth-service';
 
 const isElectron = !!window.electron?.ipcRenderer;
 
@@ -54,13 +54,13 @@ export function AuthButton(): React.JSX.Element {
     }
   }, [setStatus, setError]);
 
-  // Browser login — step 1: open auth URL
+  // Browser login — step 1: open Google auth URL
   const handleBrowserLogin = useCallback(async () => {
     try {
       setStatus('authenticating');
       const pkce = await generatePKCE();
       setCodeVerifier(pkce.codeVerifier);
-      const authUrl = getAuthorizationURL(pkce.codeChallenge, pkce.codeVerifier);
+      const authUrl = getGoogleAuthURL(pkce.codeChallenge, pkce.codeVerifier);
       window.open(authUrl, '_blank');
       setShowCodeInput(true);
     } catch (err) {
@@ -68,13 +68,14 @@ export function AuthButton(): React.JSX.Element {
     }
   }, [setStatus, setError, setCodeVerifier]);
 
-  // Browser login — step 2: exchange code for tokens
+  // Browser login — step 2: parse redirect URL and exchange code for tokens
   const handleExchangeCode = useCallback(async () => {
     if (!codeInput.trim() || !codeVerifier) return;
 
     setExchanging(true);
     try {
-      const tokens = await exchangeCodeForTokens(codeInput.trim(), codeVerifier);
+      const { code } = parseCallbackURL(codeInput.trim(), codeVerifier);
+      const tokens = await exchangeGoogleCode(code, codeVerifier);
       setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresAt);
       setShowCodeInput(false);
       setCodeInput('');
@@ -117,8 +118,8 @@ export function AuthButton(): React.JSX.Element {
           value={codeInput}
           onChange={(e) => setCodeInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleExchangeCode()}
-          placeholder="Paste code..."
-          className="w-24 px-1.5 py-0.5 rounded text-[10px] bg-rach-bg border border-rach-border text-rach-text placeholder:text-rach-text-muted/50 focus:outline-none focus:border-rach-accent"
+          placeholder="Paste redirect URL..."
+          className="w-40 px-1.5 py-0.5 rounded text-[10px] bg-rach-bg border border-rach-border text-rach-text placeholder:text-rach-text-muted/50 focus:outline-none focus:border-rach-accent"
           autoFocus
         />
         <button
@@ -146,7 +147,7 @@ export function AuthButton(): React.JSX.Element {
       className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-rach-accent hover:bg-rach-surface-light transition-colors disabled:opacity-50"
     >
       <LogIn size={10} />
-      {status === 'authenticating' ? 'Signing in...' : 'Sign in with Anthropic'}
+      {status === 'authenticating' ? 'Signing in...' : 'Sign in with Google'}
     </button>
   );
 }

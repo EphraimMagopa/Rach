@@ -18,10 +18,10 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
-      '/api/oauth/token': {
-        target: 'https://console.anthropic.com',
+      '/api/google/token': {
+        target: 'https://oauth2.googleapis.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace('/api/oauth/token', '/v1/oauth/token'),
+        rewrite: (path) => path.replace('/api/google/token', '/token'),
       }
     }
   }

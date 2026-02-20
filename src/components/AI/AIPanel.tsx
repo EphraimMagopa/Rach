@@ -234,7 +234,7 @@ export function AIPanel(): React.JSX.Element {
           const assistantMsg: AgentMessage = {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: 'Please sign in with Anthropic to use AI features.',
+            content: 'Please sign in with Google to use AI features.',
             timestamp: new Date().toISOString(),
             agentType: activeAgent,
           };
@@ -295,7 +295,7 @@ export function AIPanel(): React.JSX.Element {
       <div className="h-10 flex items-center justify-between px-3 border-b border-rach-border">
         <div className="flex items-center gap-1.5">
           <Bot size={14} className="text-rach-accent" />
-          <span className="text-xs font-medium text-rach-text">Claude AI</span>
+          <span className="text-xs font-medium text-rach-text">Rach AI</span>
         </div>
         <div className="flex items-center gap-1">
           <AuthButton />
@@ -392,7 +392,7 @@ export function AIPanel(): React.JSX.Element {
               Ask the {AGENTS.find((a) => a.type === activeAgent)?.label} agent for help
             </p>
             <p className="text-[10px] text-rach-text-muted/60 mt-1">
-              Powered by Claude (Anthropic)
+              Powered by Gemini (Google)
             </p>
             {authStatus !== 'authenticated' && (
               <p className="text-[10px] text-yellow-500/80 mt-2">
@@ -410,7 +410,7 @@ export function AIPanel(): React.JSX.Element {
             >
               <div className="flex items-center justify-between mb-0.5">
                 <div className="font-medium text-[10px] text-rach-text-muted">
-                  {msg.role === 'user' ? 'You' : 'Claude'}
+                  {msg.role === 'user' ? 'You' : 'Rach'}
                 </div>
                 {msg.role === 'assistant' && msg.mutations && msg.mutations.length > 0 && (
                   <button
@@ -444,7 +444,7 @@ export function AIPanel(): React.JSX.Element {
           ))
         )}
         {isLoading && (
-          <div className="text-xs text-rach-accent/60 animate-pulse">Claude is thinking...</div>
+          <div className="text-xs text-rach-accent/60 animate-pulse">Thinking...</div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -457,7 +457,7 @@ export function AIPanel(): React.JSX.Element {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Claude..."
+            placeholder="Ask Rach..."
             className="flex-1 bg-transparent px-2 py-1.5 text-xs text-rach-text placeholder:text-rach-text-muted/50 focus:outline-none"
           />
           <button
