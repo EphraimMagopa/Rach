@@ -16,6 +16,13 @@ export default defineConfig({
   },
   plugins: [react(), tailwindcss()],
   server: {
-    port: 5174
+    port: 5174,
+    proxy: {
+      '/api/oauth/token': {
+        target: 'https://console.anthropic.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/api/oauth/token', '/v1/oauth/token'),
+      }
+    }
   }
 })

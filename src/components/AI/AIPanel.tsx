@@ -12,6 +12,9 @@ import { SunoImportDialog } from './SunoImportDialog';
 import { applyMutations } from '../../utils/apply-mutations';
 import type { ProjectMutation, ToolExecution } from '../../core/models/mutations';
 import type { Project } from '../../core/models';
+import { BrowserAgentService } from '../../services/browser-agent-service';
+
+const browserAgentService = new BrowserAgentService();
 
 const AGENTS: { type: AgentType; label: string; description: string }[] = [
   { type: 'mixing', label: 'Mixing', description: 'EQ, compression, levels' },
@@ -201,35 +204,51 @@ export function AIPanel(): React.JSX.Element {
       };
       addMessage(convId, userMsg);
 
-      const ipc = window.electron?.ipcRenderer;
-      if (!ipc) {
-        const assistantMsg: AgentMessage = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: 'Claude agent requires Anthropic authentication. Please sign in to use AI features.',
-          timestamp: new Date().toISOString(),
-          agentType: activeAgent,
-        };
-        addMessage(convId, assistantMsg);
-        return;
-      }
-
       setLoading(true);
       const projectContext = buildProjectContext(project);
 
-      const result = (await ipc.invoke(
-        'agent:sendMessage',
-        activeAgent,
-        convId,
-        message,
-        projectContext
-      )) as {
+      const ipc = window.electron?.ipcRenderer;
+
+      let result: {
         success: boolean;
         text?: string;
         mutations?: ProjectMutation[];
         toolExecutions?: ToolExecution[];
         error?: string;
       };
+
+      if (ipc) {
+        // Electron IPC path
+        result = (await ipc.invoke(
+          'agent:sendMessage',
+          activeAgent,
+          convId,
+          message,
+          projectContext
+        )) as typeof result;
+      } else {
+        // Browser path — use BrowserAgentService with OAuth token
+        const token = await useAuthStore.getState().getValidToken();
+        if (!token) {
+          setLoading(false);
+          const assistantMsg: AgentMessage = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: 'Please sign in with Anthropic to use AI features.',
+            timestamp: new Date().toISOString(),
+            agentType: activeAgent,
+          };
+          addMessage(convId, assistantMsg);
+          return;
+        }
+        result = await browserAgentService.sendMessage(
+          token,
+          activeAgent,
+          convId,
+          message,
+          projectContext
+        );
+      }
 
       setLoading(false);
       handleAgentResponse(convId, result);

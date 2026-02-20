@@ -63,7 +63,7 @@ const MAX_LOOP_ITERATIONS = 10
 
 const AGENT_CONFIGS: Record<AgentType, AgentConfig> = {
   mixing: {
-    model: 'claude-opus-4-20250514',
+    model: 'claude-opus-4-6',
     systemPrompt: `You are the Rach DAW Mixing Agent. You help users mix their audio projects.
 You can adjust EQ, compression, track levels, panning, and analyze frequency spectrums.
 Be concise and technical. When the user asks you to make changes, use the available tools.
@@ -145,7 +145,7 @@ When referring to tracks, use their exact track ID from the project context.`,
     ]
   },
   composition: {
-    model: 'claude-opus-4-20250514',
+    model: 'claude-opus-4-6',
     systemPrompt: `You are the Rach DAW Composition Agent. You help users compose music.
 You can generate chord progressions, create MIDI tracks, and detect musical keys/scales.
 Be creative yet technically grounded. Output MIDI note data when creating musical content.
@@ -202,7 +202,7 @@ When referring to tracks, use their exact track ID from the project context.`,
     ]
   },
   arrangement: {
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     systemPrompt: `You are the Rach DAW Arrangement Agent. You help users arrange songs.
 You can create song sections (intro, verse, chorus, bridge, outro) and suggest arrangements.
 Be practical and focused on song structure.`,
@@ -224,7 +224,7 @@ Be practical and focused on song structure.`,
     ]
   },
   analysis: {
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     systemPrompt: `You are the Rach DAW Analysis Agent. You analyze mixes and projects.
 You provide detailed feedback on levels, frequency balance, dynamics, stereo image, and effects.
 Be analytical and provide actionable suggestions. Structure your response with clear sections.`,
