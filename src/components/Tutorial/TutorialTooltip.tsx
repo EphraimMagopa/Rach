@@ -28,28 +28,58 @@ export function TutorialTooltip({
   // Calculate tooltip position relative to the target element
   const style: React.CSSProperties = { position: 'fixed', zIndex: 60 };
 
+  const tooltipWidth = 288; // w-72 = 18rem = 288px
+  const tooltipHeight = 120; // approximate rendered height
+  const viewportPad = 12;
+
   if (targetRect) {
     const gap = 12;
     switch (position) {
       case 'bottom':
         style.top = targetRect.bottom + gap;
-        style.left = targetRect.left + targetRect.width / 2;
-        style.transform = 'translateX(-50%)';
+        style.left = Math.max(
+          viewportPad,
+          Math.min(
+            targetRect.left + targetRect.width / 2 - tooltipWidth / 2,
+            window.innerWidth - tooltipWidth - viewportPad
+          )
+        );
         break;
       case 'top':
         style.bottom = window.innerHeight - targetRect.top + gap;
-        style.left = targetRect.left + targetRect.width / 2;
-        style.transform = 'translateX(-50%)';
+        style.left = Math.max(
+          viewportPad,
+          Math.min(
+            targetRect.left + targetRect.width / 2 - tooltipWidth / 2,
+            window.innerWidth - tooltipWidth - viewportPad
+          )
+        );
         break;
       case 'right':
-        style.top = targetRect.top + targetRect.height / 2;
-        style.left = targetRect.right + gap;
-        style.transform = 'translateY(-50%)';
+        style.top = Math.max(
+          viewportPad,
+          Math.min(
+            targetRect.top + targetRect.height / 2 - tooltipHeight / 2,
+            window.innerHeight - tooltipHeight - viewportPad
+          )
+        );
+        style.left = Math.min(
+          targetRect.right + gap,
+          window.innerWidth - tooltipWidth - viewportPad
+        );
         break;
       case 'left':
-        style.top = targetRect.top + targetRect.height / 2;
-        style.right = window.innerWidth - targetRect.left + gap;
-        style.transform = 'translateY(-50%)';
+        style.top = Math.max(
+          viewportPad,
+          Math.min(
+            targetRect.top + targetRect.height / 2 - tooltipHeight / 2,
+            window.innerHeight - tooltipHeight - viewportPad
+          )
+        );
+        style.right = Math.max(
+          viewportPad,
+          window.innerWidth - targetRect.left + gap
+        );
         break;
     }
   } else {

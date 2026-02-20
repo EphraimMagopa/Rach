@@ -41,7 +41,7 @@ export function TransportBar(): React.JSX.Element {
   } = useTransportStore()
 
   return (
-    <div className="h-12 bg-rach-surface border-b border-rach-border flex items-center px-4 gap-2 shrink-0" data-tutorial="transport-bar">
+    <div className="h-14 bg-rach-surface border-b border-rach-border flex items-center px-4 gap-3 shrink-0" data-tutorial="transport-bar">
       {/* Transport controls */}
       <div className="flex items-center gap-1">
         <button
@@ -49,7 +49,7 @@ export function TransportBar(): React.JSX.Element {
           className="p-1.5 rounded hover:bg-rach-surface-light text-rach-text-muted hover:text-rach-text transition-colors"
           title="Return to start"
         >
-          <SkipBack size={16} />
+          <SkipBack size={18} />
         </button>
 
         <button
@@ -62,7 +62,7 @@ export function TransportBar(): React.JSX.Element {
           }`}
           title={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? <Square size={16} /> : <Play size={16} />}
+          {isPlaying ? <Square size={18} /> : <Play size={18} />}
         </button>
 
         <button
@@ -74,7 +74,7 @@ export function TransportBar(): React.JSX.Element {
           }`}
           title="Record"
         >
-          <Circle size={16} fill={isRecording ? 'currentColor' : 'none'} />
+          <Circle size={18} fill={isRecording ? 'currentColor' : 'none'} />
         </button>
       </div>
 
@@ -82,7 +82,7 @@ export function TransportBar(): React.JSX.Element {
       <div className="w-px h-6 bg-rach-border mx-2" />
 
       {/* Time display */}
-      <div className="flex items-center gap-4 font-mono text-sm">
+      <div className="flex items-center gap-4 font-mono text-base">
         <div className="text-rach-text tabular-nums" title="Bars.Beats.Ticks">
           {formatBeats(playheadBeats, timeSignature)}
         </div>
@@ -96,19 +96,19 @@ export function TransportBar(): React.JSX.Element {
 
       {/* Tempo */}
       <div className="flex items-center gap-1">
-        <label className="text-xs text-rach-text-muted">BPM</label>
+        <label className="text-sm text-rach-text-muted">BPM</label>
         <input
           type="number"
           value={tempo}
           onChange={(e) => setTempo(Number(e.target.value))}
           min={20}
           max={300}
-          className="w-14 bg-rach-bg border border-rach-border rounded px-1.5 py-0.5 text-sm text-rach-text text-center focus:outline-none focus:border-rach-accent"
+          className="w-16 bg-rach-bg border border-rach-border rounded px-2 py-0.5 text-base text-rach-text text-center focus:outline-none focus:border-rach-accent"
         />
       </div>
 
       {/* Time signature */}
-      <div className="text-xs text-rach-text-muted">
+      <div className="text-sm text-rach-text-muted">
         {timeSignature[0]}/{timeSignature[1]}
       </div>
 
@@ -126,7 +126,7 @@ export function TransportBar(): React.JSX.Element {
           }`}
           title="Loop"
         >
-          <Repeat size={16} />
+          <Repeat size={18} />
         </button>
 
         <button
@@ -138,7 +138,7 @@ export function TransportBar(): React.JSX.Element {
           }`}
           title="Metronome"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2L8 22h8L12 2z" />
             <path d="M12 8l4-4" />
           </svg>
