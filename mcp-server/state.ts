@@ -203,13 +203,20 @@ export class ProjectState {
   getProject(): Project { return this.project; }
 
   save(): string {
-    const filePath = path.join(this.projectDir, `${this.project.id}.json`);
+    const filePath = path.join(this.projectDir, 'active.json');
     fs.writeFileSync(filePath, JSON.stringify(this.project, null, 2));
     return filePath;
   }
 
   load(projectId: string): boolean {
     const filePath = path.join(this.projectDir, `${projectId}.json`);
+    if (!fs.existsSync(filePath)) return false;
+    this.project = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    return true;
+  }
+
+  loadActive(): boolean {
+    const filePath = path.join(this.projectDir, 'active.json');
     if (!fs.existsSync(filePath)) return false;
     this.project = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     return true;

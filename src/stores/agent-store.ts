@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import type { ProjectMutation, ToolExecution } from '../core/models/mutations';
+import type { ToolExecution } from '../core/models/mutations';
 
-export type AgentType = 'mixing' | 'composition' | 'arrangement' | 'analysis';
 export type MessageRole = 'user' | 'assistant';
 
 export interface AgentMessage {
@@ -9,55 +8,61 @@ export interface AgentMessage {
   role: MessageRole;
   content: string;
   timestamp: string;
-  agentType: AgentType;
+  agentId?: string;
+  agentName?: string;
+  isStreaming?: boolean;
   toolExecutions?: ToolExecution[];
-  mutations?: ProjectMutation[];
-}
-
-export interface Conversation {
-  id: string;
-  agentType: AgentType;
-  messages: AgentMessage[];
-  createdAt: string;
 }
 
 interface AgentState {
-  activeAgent: AgentType;
-  conversations: Conversation[];
+  activeAgentId: string | null;
+  activeAgentName: string | null;
+  messages: AgentMessage[];
   isLoading: boolean;
+  isThinking: boolean;
+  thinkingContent: string;
 
-  setActiveAgent: (agent: AgentType) => void;
-  addMessage: (conversationId: string, message: AgentMessage) => void;
-  createConversation: (agentType: AgentType) => string;
-  setLoading: (loading: boolean) => void;
+  addMessage: (msg: AgentMessage) => void;
+  updateLastMessage: (updates: Partial<AgentMessage>) => void;
+  setActiveAgent: (id: string | null, name: string | null) => void;
+  setLoading: (v: boolean) => void;
+  setThinking: (v: boolean) => void;
+  appendThinking: (text: string) => void;
+  clearMessages: () => void;
+  clearThinking: () => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
-  activeAgent: 'mixing',
-  conversations: [],
+  activeAgentId: null,
+  activeAgentName: null,
+  messages: [],
   isLoading: false,
+  isThinking: false,
+  thinkingContent: '',
 
-  setActiveAgent: (activeAgent) => set({ activeAgent }),
+  addMessage: (msg) =>
+    set((state) => ({ messages: [...state.messages, msg] })),
 
-  addMessage: (conversationId, message) =>
-    set((state) => ({
-      conversations: state.conversations.map((c) =>
-        c.id === conversationId
-          ? { ...c, messages: [...c.messages, message] }
-          : c
-      ),
-    })),
+  updateLastMessage: (updates) =>
+    set((state) => {
+      const messages = [...state.messages];
+      if (messages.length === 0) return state;
+      const last = messages[messages.length - 1];
+      messages[messages.length - 1] = { ...last, ...updates };
+      return { messages };
+    }),
 
-  createConversation: (agentType) => {
-    const id = crypto.randomUUID();
-    set((state) => ({
-      conversations: [
-        ...state.conversations,
-        { id, agentType, messages: [], createdAt: new Date().toISOString() },
-      ],
-    }));
-    return id;
-  },
+  setActiveAgent: (id, name) =>
+    set({ activeAgentId: id, activeAgentName: name }),
 
   setLoading: (isLoading) => set({ isLoading }),
+
+  setThinking: (isThinking) => set({ isThinking }),
+
+  appendThinking: (text) =>
+    set((state) => ({ thinkingContent: state.thinkingContent + text })),
+
+  clearMessages: () => set({ messages: [] }),
+
+  clearThinking: () => set({ thinkingContent: '', isThinking: false }),
 }));

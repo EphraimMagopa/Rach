@@ -1,269 +1,233 @@
-import { Send, Bot, X, BarChart3, Undo2, Scissors, Download } from 'lucide-react';
+import { Send, Bot, X, BarChart3, Undo2, Scissors, Download, Brain } from 'lucide-react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAgentStore } from '../../stores/agent-store';
-import type { AgentType, AgentMessage } from '../../stores/agent-store';
+import type { AgentMessage } from '../../stores/agent-store';
 import { useAuthStore } from '../../stores/auth-store';
 import { useProjectStore } from '../../stores/project-store';
+import { useTransportStore } from '../../stores/transport-store';
 import { useUIStore } from '../../stores/ui-store';
 import { AuthButton } from './AuthButton';
 import { ToolExecutionCard } from './ToolExecutionCard';
 import { StemSeparationPanel } from './StemSeparationPanel';
 import { SunoImportDialog } from './SunoImportDialog';
-import { applyMutations } from '../../utils/apply-mutations';
-import type { ProjectMutation, ToolExecution } from '../../core/models/mutations';
+import { ravelClient } from '../../services/ravel-client';
+import type { ToolExecution } from '../../core/models/mutations';
 import type { Project } from '../../core/models';
-import { BrowserAgentService } from '../../services/browser-agent-service';
 
-const browserAgentService = new BrowserAgentService();
-
-const AGENTS: { type: AgentType; label: string; description: string }[] = [
-  { type: 'mixing', label: 'Mixing', description: 'EQ, compression, levels' },
-  { type: 'composition', label: 'Compose', description: 'Chords, melodies, keys' },
-  { type: 'arrangement', label: 'Arrange', description: 'Song structure' },
-  { type: 'analysis', label: 'Analyze', description: 'Mix analysis' },
-];
-
-function buildProjectContext(project: Project): string {
-  return JSON.stringify({
-    title: project.metadata.title,
-    tempo: project.tempo,
-    timeSignature: project.timeSignature,
-    sections: project.sections || [],
-    tracks: project.tracks.map((t) => ({
-      id: t.id,
-      name: t.name,
-      type: t.type,
-      volume: t.volume,
-      pan: t.pan,
-      muted: t.muted,
-      effects: t.effects.map((e) => ({
-        type: e.type,
-        name: e.name,
-        params: Object.fromEntries(e.parameters.map((p) => [p.name, p.value])),
-      })),
-      sends: (t.sends || []).map((s) => ({
-        targetBusId: s.targetBusId,
-        gain: s.gain,
-      })),
-      clips: t.clips.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        startBeat: c.startBeat,
-        durationBeats: c.durationBeats,
-        ...(c.type === 'midi' && c.midiData
-          ? {
-              midiNotes: c.midiData.notes.map((n) => ({
-                pitch: n.pitch,
-                velocity: n.velocity,
-                startBeat: n.startBeat,
-                durationBeats: n.durationBeats,
-              })),
-            }
-          : {}),
-      })),
-    })),
-  });
+/** Path to the shared active.json file — resolved at runtime in Electron */
+function getActiveJsonPath(): string {
+  const home = typeof process !== 'undefined' ? process.env.HOME || process.env.USERPROFILE || '' : '';
+  return `${home}/.rach/projects/active.json`;
 }
 
-interface UndoableStore {
-  project: Project;
-  updateTrack: (trackId: string, updates: Partial<import('../../core/models').Track>) => void;
-  removeEffect: (trackId: string, effectId: string) => void;
-  removeClip: (trackId: string, clipId: string) => void;
-  removeMidiNote: (trackId: string, clipId: string, noteId: string) => void;
-  removeSection: (sectionId: string) => void;
+/** Export the current project to active.json */
+async function exportProjectToFile(project: Project): Promise<void> {
+  const ipc = window.electron?.ipcRenderer;
+  if (ipc) {
+    // Electron mode — use IPC
+    await ipc.invoke('file:save', getActiveJsonPath(), JSON.stringify(project, null, 2));
+  } else {
+    // Browser mode — use Vite dev server plugin
+    await fetch('/rach-api/project', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(project, null, 2),
+    });
+  }
 }
 
-/** Reverse mutations to undo agent changes */
-function undoMutations(
-  store: UndoableStore,
-  mutations: ProjectMutation[]
-): void {
-  for (let i = mutations.length - 1; i >= 0; i--) {
-    const m = mutations[i];
-    switch (m.type) {
-      case 'setTrackVolume': {
-        store.updateTrack(m.trackId, { volume: 0 });
-        break;
-      }
-      case 'setTrackPan': {
-        store.updateTrack(m.trackId, { pan: 0 });
-        break;
-      }
-      case 'addEffect': {
-        const track = store.project.tracks.find((t) => t.id === m.trackId);
-        if (track && track.effects.length > 0) {
-          const lastEffect = [...track.effects].reverse().find((e) => e.type === m.effectType);
-          if (lastEffect) store.removeEffect(m.trackId, lastEffect.id);
-        }
-        break;
-      }
-      case 'createClip': {
-        store.removeClip(m.trackId, m.clip.id);
-        break;
-      }
-      case 'addMidiNotes': {
-        for (const note of m.notes) {
-          store.removeMidiNote(m.trackId, m.clipId, note.id);
-        }
-        break;
-      }
-      case 'createSection': {
-        const section = store.project.sections.find(
-          (s) => s.name === m.name && s.startBeat === m.startBeat
-        );
-        if (section) store.removeSection(section.id);
-        break;
-      }
+/** Read active.json after an agent turn and sync to Zustand */
+async function readActiveProject(): Promise<Project | null> {
+  const ipc = window.electron?.ipcRenderer;
+  try {
+    if (ipc) {
+      // Electron mode — use IPC
+      const content = await ipc.invoke('file:read', getActiveJsonPath()) as string;
+      return JSON.parse(content) as Project;
+    } else {
+      // Browser mode — use Vite dev server plugin
+      const res = await fetch('/rach-api/project');
+      if (!res.ok) return null;
+      return await res.json() as Project;
     }
+  } catch {
+    return null;
   }
 }
 
 export function AIPanel(): React.JSX.Element {
-  const agentStore = useAgentStore();
-  const { activeAgent, setActiveAgent, conversations, addMessage, createConversation, isLoading, setLoading } =
-    agentStore;
-  const { status: authStatus } = useAuthStore();
+  const {
+    messages, addMessage, updateLastMessage, isLoading, setLoading,
+    isThinking, thinkingContent, setThinking, appendThinking, clearThinking,
+    activeAgentName, setActiveAgent,
+  } = useAgentStore();
+  const { status: connectionStatus } = useAuthStore();
   const projectStore = useProjectStore();
-  const { project } = projectStore;
+  const { project, setProject } = projectStore;
   const { togglePanel } = useUIStore();
   const [input, setInput] = useState('');
   const [showStemPanel, setShowStemPanel] = useState(false);
   const [showSunoDialog, setShowSunoDialog] = useState(false);
+  const [undoSnapshots, setUndoSnapshots] = useState<Map<string, Project>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const activeConversation = conversations.find((c) => c.agentType === activeAgent);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConversation?.messages.length]);
+  }, [messages.length, isThinking]);
 
-  const handleAgentResponse = useCallback(
-    (
-      convId: string,
-      result: {
-        success: boolean;
-        text?: string;
-        mutations?: ProjectMutation[];
-        toolExecutions?: ToolExecution[];
-        error?: string;
+  // Connect to Ravel on mount
+  useEffect(() => {
+    const authStore = useAuthStore.getState();
+
+    async function init() {
+      try {
+        await ravelClient.connect();
+        const sessionId = await ravelClient.createSession(project.metadata.title || 'Rach Session');
+        authStore.setSessionId(sessionId);
+        await exportProjectToFile(project);
+      } catch {
+        // Status updates handled by ravelClient's onStatusChange
       }
-    ) => {
-      if (result.success && result.text !== undefined) {
-        const mutations = result.mutations || [];
-        const toolExecutions = result.toolExecutions || [];
+    }
 
-        // Apply mutations to project store
-        if (mutations.length > 0) {
-          applyMutations(projectStore, mutations);
-        }
+    // Sync connection status to auth store
+    const unsubStatus = ravelClient.onStatusChange((newStatus) => {
+      authStore.setStatus(newStatus);
+    });
 
-        const assistantMsg: AgentMessage = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: result.text,
-          timestamp: new Date().toISOString(),
-          agentType: activeAgent,
-          toolExecutions: toolExecutions.length > 0 ? toolExecutions : undefined,
-          mutations: mutations.length > 0 ? mutations : undefined,
-        };
-        addMessage(convId, assistantMsg);
+    init();
+
+    return () => {
+      unsubStatus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Subscribe to Ravel streaming events
+  useEffect(() => {
+    const unsubs: Array<() => void> = [];
+
+    // Streaming text from assistant
+    unsubs.push(ravelClient.on('assistant_message', (event) => {
+      const lastMsg = useAgentStore.getState().messages.at(-1);
+      if (lastMsg?.role === 'assistant' && lastMsg.isStreaming) {
+        updateLastMessage({ content: lastMsg.content + (event.content || '') });
       } else {
-        const errorMsg: AgentMessage = {
+        addMessage({
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: `Error: ${result.error || 'Unknown error'}`,
+          content: event.content || '',
           timestamp: new Date().toISOString(),
-          agentType: activeAgent,
-        };
-        addMessage(convId, errorMsg);
+          agentName: useAgentStore.getState().activeAgentName || undefined,
+          isStreaming: true,
+        });
       }
-    },
-    [activeAgent, addMessage, projectStore]
-  );
+    }));
+
+    // Thinking indicator
+    unsubs.push(ravelClient.on('thinking_start', () => {
+      clearThinking();
+      setThinking(true);
+    }));
+
+    unsubs.push(ravelClient.on('thinking_delta', (event) => {
+      appendThinking(event.content || '');
+    }));
+
+    // Tool use — add to current streaming message's toolExecutions
+    unsubs.push(ravelClient.on('tool_use', (event) => {
+      const exec: ToolExecution = {
+        name: event.toolName || 'unknown',
+        input: event.toolInput,
+        result: event.toolResult || '',
+      };
+      const lastMsg = useAgentStore.getState().messages.at(-1);
+      if (lastMsg?.role === 'assistant') {
+        const existing = lastMsg.toolExecutions || [];
+        updateLastMessage({ toolExecutions: [...existing, exec] });
+      }
+    }));
+
+    // Agent context — which Ravel agent is active
+    unsubs.push(ravelClient.on('agent_context', (event) => {
+      setActiveAgent(event.agentId || null, event.agentName || null);
+    }));
+
+    // Turn complete — sync project state from active.json
+    unsubs.push(ravelClient.on('result', async () => {
+      // Mark last message as done streaming
+      const lastMsg = useAgentStore.getState().messages.at(-1);
+      if (lastMsg?.isStreaming) {
+        updateLastMessage({ isStreaming: false });
+      }
+      clearThinking();
+      setLoading(false);
+
+      // Read updated project from active.json
+      const updatedProject = await readActiveProject();
+      if (updatedProject) {
+        setProject(updatedProject);
+        // Sync transport store (separate from project store)
+        const transport = useTransportStore.getState();
+        transport.setTempo(updatedProject.tempo);
+        const ts = updatedProject.timeSignature;
+        transport.setTimeSignature([ts.numerator, ts.denominator]);
+      }
+    }));
+
+    // Error
+    unsubs.push(ravelClient.on('error', (event) => {
+      setLoading(false);
+      clearThinking();
+      addMessage({
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Error: ${event.error || 'Unknown error'}`,
+        timestamp: new Date().toISOString(),
+      });
+    }));
+
+    return () => {
+      for (const unsub of unsubs) unsub();
+    };
+  }, [addMessage, updateLastMessage, setLoading, setThinking, appendThinking, clearThinking, setActiveAgent, setProject]);
 
   const sendMessage = useCallback(
     async (text?: string) => {
       const message = text || input.trim();
       if (!message || isLoading) return;
-
       if (!text) setInput('');
 
-      let convId = activeConversation?.id;
-      if (!convId) {
-        convId = createConversation(activeAgent);
+      if (connectionStatus !== 'connected') {
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'Not connected to Ravel. Please check that Ravel is running on localhost:3061.',
+          timestamp: new Date().toISOString(),
+        });
+        return;
       }
 
+      // Save undo snapshot before this turn
+      const snapshotId = crypto.randomUUID();
+      setUndoSnapshots((prev) => new Map(prev).set(snapshotId, structuredClone(project)));
+
       const userMsg: AgentMessage = {
-        id: crypto.randomUUID(),
+        id: snapshotId, // use same ID for undo tracking
         role: 'user',
         content: message,
         timestamp: new Date().toISOString(),
-        agentType: activeAgent,
       };
-      addMessage(convId, userMsg);
+      addMessage(userMsg);
+
+      // Export current project state before sending
+      await exportProjectToFile(project);
 
       setLoading(true);
-      const projectContext = buildProjectContext(project);
-
-      const ipc = window.electron?.ipcRenderer;
-
-      let result: {
-        success: boolean;
-        text?: string;
-        mutations?: ProjectMutation[];
-        toolExecutions?: ToolExecution[];
-        error?: string;
-      };
-
-      if (ipc) {
-        // Electron IPC path
-        result = (await ipc.invoke(
-          'agent:sendMessage',
-          activeAgent,
-          convId,
-          message,
-          projectContext
-        )) as typeof result;
-      } else {
-        // Browser path — use BrowserAgentService with OAuth token
-        const token = await useAuthStore.getState().getValidToken();
-        if (!token) {
-          setLoading(false);
-          const assistantMsg: AgentMessage = {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: 'Please add your Gemini API key to use AI features. Get a free key at aistudio.google.com/apikey',
-            timestamp: new Date().toISOString(),
-            agentType: activeAgent,
-          };
-          addMessage(convId, assistantMsg);
-          return;
-        }
-        result = await browserAgentService.sendMessage(
-          token,
-          activeAgent,
-          convId,
-          message,
-          projectContext
-        );
-      }
-
-      setLoading(false);
-      handleAgentResponse(convId, result);
+      clearThinking();
+      ravelClient.sendMessage(message);
     },
-    [
-      input,
-      isLoading,
-      activeAgent,
-      activeConversation,
-      project,
-      addMessage,
-      createConversation,
-      setLoading,
-      handleAgentResponse,
-    ]
+    [input, isLoading, connectionStatus, project, addMessage, setLoading, clearThinking]
   );
 
   const handleAnalyzeMix = useCallback(() => {
@@ -272,11 +236,20 @@ export function AIPanel(): React.JSX.Element {
 
   const handleUndo = useCallback(
     (msg: AgentMessage) => {
-      if (msg.mutations && msg.mutations.length > 0) {
-        undoMutations(projectStore, msg.mutations);
+      // Find the user message that triggered this response (the message before it)
+      const msgIdx = messages.indexOf(msg);
+      if (msgIdx <= 0) return;
+      const userMsg = messages[msgIdx - 1];
+      const snapshot = undoSnapshots.get(userMsg.id);
+      if (snapshot) {
+        setProject(snapshot);
+        const transport = useTransportStore.getState();
+        transport.setTempo(snapshot.tempo);
+        transport.setTimeSignature([snapshot.timeSignature.numerator, snapshot.timeSignature.denominator]);
+        exportProjectToFile(snapshot);
       }
     },
-    [projectStore]
+    [messages, undoSnapshots, setProject]
   );
 
   const handleKeyDown = useCallback(
@@ -296,6 +269,11 @@ export function AIPanel(): React.JSX.Element {
         <div className="flex items-center gap-1.5">
           <Bot size={14} className="text-rach-accent" />
           <span className="text-xs font-medium text-rach-text">Rach AI</span>
+          {activeAgentName && (
+            <span className="text-[10px] text-rach-text-muted/70 ml-1">
+              ({activeAgentName})
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <AuthButton />
@@ -306,24 +284,6 @@ export function AIPanel(): React.JSX.Element {
             <X size={14} />
           </button>
         </div>
-      </div>
-
-      {/* Agent tabs */}
-      <div className="flex border-b border-rach-border">
-        {AGENTS.map((agent) => (
-          <button
-            key={agent.type}
-            onClick={() => setActiveAgent(agent.type)}
-            className={`flex-1 py-1.5 text-[10px] transition-colors ${
-              activeAgent === agent.type
-                ? 'text-rach-accent border-b-2 border-rach-accent bg-rach-accent/5'
-                : 'text-rach-text-muted hover:text-rach-text'
-            }`}
-            title={agent.description}
-          >
-            {agent.label}
-          </button>
-        ))}
       </div>
 
       {/* Quick actions */}
@@ -385,23 +345,23 @@ export function AIPanel(): React.JSX.Element {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3">
-        {!activeConversation || activeConversation.messages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="text-center mt-8">
             <Bot size={32} className="mx-auto text-rach-text-muted/30 mb-3" />
             <p className="text-xs text-rach-text-muted">
-              Ask the {AGENTS.find((a) => a.type === activeAgent)?.label} agent for help
+              Chat with Ravel's music agents
             </p>
             <p className="text-[10px] text-rach-text-muted/60 mt-1">
-              Powered by Gemini (Google)
+              Powered by Ravel
             </p>
-            {authStatus !== 'authenticated' && (
+            {connectionStatus !== 'connected' && (
               <p className="text-[10px] text-yellow-500/80 mt-2">
-                Add Gemini API key to use AI features
+                Connecting to Ravel...
               </p>
             )}
           </div>
         ) : (
-          activeConversation.messages.map((msg) => (
+          messages.map((msg, idx) => (
             <div
               key={msg.id}
               className={`mb-3 text-xs ${
@@ -410,13 +370,13 @@ export function AIPanel(): React.JSX.Element {
             >
               <div className="flex items-center justify-between mb-0.5">
                 <div className="font-medium text-[10px] text-rach-text-muted">
-                  {msg.role === 'user' ? 'You' : 'Rach'}
+                  {msg.role === 'user' ? 'You' : (msg.agentName || 'Rach')}
                 </div>
-                {msg.role === 'assistant' && msg.mutations && msg.mutations.length > 0 && (
+                {msg.role === 'assistant' && !msg.isStreaming && idx > 0 && (
                   <button
                     onClick={() => handleUndo(msg)}
                     className="flex items-center gap-0.5 text-[9px] text-rach-text-muted/60 hover:text-rach-accent transition-colors"
-                    title="Undo these changes"
+                    title="Undo changes from this response"
                   >
                     <Undo2 size={9} />
                     Undo
@@ -433,18 +393,24 @@ export function AIPanel(): React.JSX.Element {
                   ))}
                 </div>
               )}
-
-              {/* Mutation summary */}
-              {msg.mutations && msg.mutations.length > 0 && (
-                <div className="mt-1 text-[10px] text-green-400/80 bg-green-500/5 rounded px-2 py-1">
-                  Applied {msg.mutations.length} change{msg.mutations.length > 1 ? 's' : ''} to project
-                </div>
-              )}
             </div>
           ))
         )}
-        {isLoading && (
-          <div className="text-xs text-rach-accent/60 animate-pulse">Thinking...</div>
+        {isThinking && (
+          <div className="mb-3 text-xs">
+            <div className="flex items-center gap-1 text-rach-accent/60 animate-pulse">
+              <Brain size={12} />
+              Thinking...
+            </div>
+            {thinkingContent && (
+              <div className="text-[10px] text-rach-text-muted/50 mt-1 whitespace-pre-wrap max-h-20 overflow-y-auto">
+                {thinkingContent}
+              </div>
+            )}
+          </div>
+        )}
+        {isLoading && !isThinking && (
+          <div className="text-xs text-rach-accent/60 animate-pulse">Processing...</div>
         )}
         <div ref={messagesEndRef} />
       </div>

@@ -59,7 +59,6 @@ export class StemSeparator {
 
     try {
       // Dynamic import of onnxruntime-node (optional dependency)
-      // @ts-expect-error -- onnxruntime-node is an optional runtime dependency
       this.ort = await import('onnxruntime-node') as unknown as typeof this.ort
     } catch {
       throw new Error(

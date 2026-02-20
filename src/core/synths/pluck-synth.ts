@@ -4,10 +4,14 @@ import type { RachSynthInstance, SynthParameter } from './synth-interface';
 /**
  * Karplus-Strong style plucked string synth via Tone.PluckSynth.
  * Clean, bright plucked tones — guitar, harp, koto, pizzicato.
+ *
+ * Note: PluckSynth doesn't extend Monophonic in Tone.js's type definitions,
+ * so PolySynth<PluckSynth> doesn't typecheck. We use PolySynth (unparameterized)
+ * and cast PluckSynth-specific options where needed. This works at runtime.
  */
 export class PluckSynth implements RachSynthInstance {
   readonly type = 'pluck' as const;
-  private synth: Tone.PolySynth<Tone.PluckSynth>;
+  private synth: Tone.PolySynth;
   private output: Tone.Gain;
 
   private attackNoise = 1;
@@ -17,7 +21,8 @@ export class PluckSynth implements RachSynthInstance {
   constructor() {
     this.output = new Tone.Gain(0.6);
 
-    this.synth = new Tone.PolySynth(Tone.PluckSynth, {
+    // PluckSynth works with PolySynth at runtime but the types don't align
+    this.synth = new (Tone.PolySynth as any)(Tone.PluckSynth, {
       attackNoise: this.attackNoise,
       dampening: this.dampening,
       resonance: this.resonance,
@@ -70,15 +75,15 @@ export class PluckSynth implements RachSynthInstance {
     switch (name) {
       case 'attackNoise':
         this.attackNoise = value;
-        this.synth.set({ attackNoise: value });
+        (this.synth as any).set({ attackNoise: value });
         break;
       case 'dampening':
         this.dampening = value;
-        this.synth.set({ dampening: value });
+        (this.synth as any).set({ dampening: value });
         break;
       case 'resonance':
         this.resonance = value;
-        this.synth.set({ resonance: value });
+        (this.synth as any).set({ resonance: value });
         break;
     }
   }

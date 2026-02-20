@@ -1,131 +1,44 @@
-import { useCallback, useEffect, useState } from 'react';
-import { LogIn, LogOut } from 'lucide-react';
+import { WifiOff, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth-store';
-
-const isElectron = !!window.electron?.ipcRenderer;
+import { ravelClient } from '../../services/ravel-client';
+import { useCallback } from 'react';
 
 export function AuthButton(): React.JSX.Element {
-  const { status, setApiKey, clearApiKey, setStatus, setError, loadPersistedAuth } =
-    useAuthStore();
-  const [showKeyInput, setShowKeyInput] = useState(false);
-  const [keyInput, setKeyInput] = useState('');
+  const { status } = useAuthStore();
 
-  // Restore persisted auth on mount (browser mode)
-  useEffect(() => {
-    if (!isElectron) {
-      loadPersistedAuth();
-    }
-  }, [loadPersistedAuth]);
-
-  // Listen for OAuth callback from main process (Electron mode)
-  useEffect(() => {
-    const ipc = window.electron?.ipcRenderer;
-    if (!ipc) return;
-
-    const handler = (_event: unknown, data: {
-      success: boolean;
-      accessToken?: string;
-      error?: string;
-    }) => {
-      if (data.success && data.accessToken) {
-        setApiKey(data.accessToken);
-      } else {
-        setError(data.error || 'Authentication failed');
-      }
-    };
-
-    ipc.on('auth:callback', handler as (...args: unknown[]) => void);
-    return () => ipc.removeListener('auth:callback', handler as (...args: unknown[]) => void);
-  }, [setApiKey, setError]);
-
-  // Electron login
-  const handleElectronLogin = useCallback(async () => {
-    const ipc = window.electron?.ipcRenderer;
-    if (!ipc) return;
-
-    setStatus('authenticating');
-    const result = await ipc.invoke('auth:startLogin') as { success: boolean; error?: string };
-    if (!result.success) {
-      setError(result.error || 'Failed to start authentication');
-    }
-  }, [setStatus, setError]);
-
-  // Browser login — show API key input
-  const handleBrowserLogin = useCallback(() => {
-    setShowKeyInput(true);
+  const handleReconnect = useCallback(() => {
+    ravelClient.connect().catch(() => {
+      // Status updates handled by the client's onStatusChange
+    });
   }, []);
 
-  // Browser login — save API key
-  const handleSaveKey = useCallback(() => {
-    const key = keyInput.trim();
-    if (!key) return;
-    setApiKey(key);
-    setShowKeyInput(false);
-    setKeyInput('');
-  }, [keyInput, setApiKey]);
-
-  const handleLogout = useCallback(async () => {
-    const ipc = window.electron?.ipcRenderer;
-    if (ipc) {
-      await ipc.invoke('auth:logout');
-    }
-    clearApiKey();
-    setShowKeyInput(false);
-    setKeyInput('');
-  }, [clearApiKey]);
-
-  // Authenticated state
-  if (status === 'authenticated') {
+  if (status === 'connected') {
     return (
-      <button
-        onClick={handleLogout}
-        className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-green-400 hover:bg-rach-surface-light transition-colors"
-      >
-        <LogOut size={10} />
-        Sign Out
-      </button>
-    );
-  }
-
-  // Browser mode: API key input step
-  if (!isElectron && showKeyInput) {
-    return (
-      <div className="flex items-center gap-1">
-        <input
-          type="password"
-          value={keyInput}
-          onChange={(e) => setKeyInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSaveKey()}
-          placeholder="Paste Gemini API key..."
-          className="w-40 px-1.5 py-0.5 rounded text-[10px] bg-rach-bg border border-rach-border text-rach-text placeholder:text-rach-text-muted/50 focus:outline-none focus:border-rach-accent"
-          autoFocus
-        />
-        <button
-          onClick={handleSaveKey}
-          disabled={!keyInput.trim()}
-          className="px-1.5 py-0.5 rounded text-[10px] bg-rach-accent text-white hover:bg-rach-accent/80 disabled:opacity-50 transition-colors"
-        >
-          Connect
-        </button>
-        <button
-          onClick={() => { setShowKeyInput(false); setStatus('idle'); }}
-          className="px-1 py-0.5 rounded text-[10px] text-rach-text-muted hover:text-rach-text transition-colors"
-        >
-          Cancel
-        </button>
+      <div className="flex items-center gap-1 px-2 py-1 text-[10px] text-green-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+        Connected
       </div>
     );
   }
 
-  // Default: sign in button
+  if (status === 'connecting') {
+    return (
+      <div className="flex items-center gap-1 px-2 py-1 text-[10px] text-yellow-400">
+        <Loader2 size={10} className="animate-spin" />
+        Connecting...
+      </div>
+    );
+  }
+
+  // disconnected or error
   return (
     <button
-      onClick={isElectron ? handleElectronLogin : handleBrowserLogin}
-      disabled={status === 'authenticating'}
-      className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-rach-accent hover:bg-rach-surface-light transition-colors disabled:opacity-50"
+      onClick={handleReconnect}
+      className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-red-400 hover:bg-rach-surface-light transition-colors"
+      title={status === 'error' ? 'Connection error — click to reconnect' : 'Disconnected — click to reconnect'}
     >
-      <LogIn size={10} />
-      Add Gemini API Key
+      <WifiOff size={10} />
+      Reconnect
     </button>
   );
 }

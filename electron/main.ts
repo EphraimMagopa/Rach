@@ -189,6 +189,10 @@ function setupIPC(): void {
     return true
   })
 
+  ipcMain.handle('file:read', async (_event, filePath: string) => {
+    return await readFile(filePath, 'utf-8')
+  })
+
   ipcMain.handle('file:saveAs', async () => {
     const result = await dialog.showSaveDialog({
       filters: [{ name: 'Rach Project', extensions: ['rach'] }]

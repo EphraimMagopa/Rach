@@ -304,6 +304,7 @@ server.tool(
 // ── Start ────────────────────────────────────────────────────────────
 
 async function main() {
+  state.loadActive();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
