@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { useProjectStore } from '../../stores/project-store';
 import { useUIStore } from '../../stores/ui-store';
 import { useTransportStore } from '../../stores/transport-store';
@@ -69,10 +69,13 @@ export function Timeline(): React.JSX.Element {
   const setScroll = useUIStore((s) => s.setScroll);
   const toolMode = useUIStore((s) => s.toolMode);
   const automationVisibility = useUIStore((s) => s.automationVisibility);
+  const snapEnabled = useUIStore((s) => s.snapEnabled);
+  const snapGridSize = useUIStore((s) => s.snapGridSize);
   const timeSignature = useTransportStore((s) => s.timeSignature);
   const { engine: audioEngine } = useAudioEngine();
   const tracks = project.tracks;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
 
   const beatsPerBar = timeSignature[0];
@@ -240,6 +243,76 @@ export function Timeline(): React.JSX.Element {
     }
   }, [audioEngine, tracks]);
 
+  // Handle audio file import via button
+  const handleFileImport = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []).filter((f) =>
+        f.type.startsWith('audio/')
+      );
+      if (files.length === 0) return;
+
+      const fileManager = getAudioFileManager();
+      const ctx = audioEngine.audioContext;
+      if (!ctx) return;
+
+      if (!fileManager.getCachedBuffer('__initialized__')) {
+        fileManager.initialize(ctx);
+      }
+
+      // Find or create an audio track
+      let audioTrack = tracks.find((t) => t.type === 'audio');
+      if (!audioTrack) {
+        audioTrack = createTrack('audio', tracks.length);
+        addTrack(audioTrack);
+        if (audioEngine.isInitialized) {
+          audioEngine.createTrackNode(audioTrack.id);
+        }
+      }
+
+      const tempo = useTransportStore.getState().tempo;
+      // Place clips at the end of existing content on this track
+      let insertBeat = 0;
+      for (const clip of audioTrack.clips) {
+        const clipEnd = clip.startBeat + clip.durationBeats;
+        if (clipEnd > insertBeat) insertBeat = clipEnd;
+      }
+
+      for (const file of files) {
+        const { fileId, buffer } = await fileManager.decodeFile(file);
+        const durationBeats = TimePosition.secondsToBeats(buffer.duration, tempo);
+
+        const clip: Clip = {
+          id: crypto.randomUUID(),
+          name: file.name.replace(/\.[^.]+$/, ''),
+          type: 'audio',
+          trackId: audioTrack.id,
+          startBeat: insertBeat,
+          durationBeats,
+          loopEnabled: false,
+          loopLengthBeats: durationBeats,
+          fade: { inDuration: 0, outDuration: 0, inCurve: 0, outCurve: 0 },
+          color: TRACK_COLOR_MAP[audioTrack.color],
+          audioData: {
+            fileId,
+            sampleRate: buffer.sampleRate,
+            channels: buffer.numberOfChannels,
+            startOffset: 0,
+            gain: 0,
+            pitch: 0,
+          },
+        };
+
+        addClip(audioTrack.id, clip);
+        selectClip(clip.id);
+        insertBeat += durationBeats;
+      }
+
+      // Reset the input so the same file can be re-imported
+      e.target.value = '';
+    },
+    [audioEngine, tracks, addTrack, addClip, selectClip]
+  );
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
       {/* Ruler row */}
@@ -352,7 +425,7 @@ export function Timeline(): React.JSX.Element {
           <div className="flex items-center gap-2 p-3" style={{ marginLeft: 0 }}>
             <button
               onClick={() => handleAddTrack('audio')}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded text-sm text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
             >
               <Plus size={14} />
               Audio Track
@@ -360,17 +433,32 @@ export function Timeline(): React.JSX.Element {
             <button
               data-tutorial="add-midi-track"
               onClick={() => handleAddTrack('midi')}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded text-sm text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
             >
               <Plus size={14} />
               MIDI Track
             </button>
             <button
               onClick={() => handleAddTrack('bus')}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded text-sm text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
             >
               <Plus size={14} />
               Bus Track
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*"
+              multiple
+              className="hidden"
+              onChange={handleFileImport}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 px-2 py-1 rounded text-sm text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
+            >
+              <Upload size={14} />
+              Import Audio
             </button>
           </div>
         </div>
@@ -379,14 +467,43 @@ export function Timeline(): React.JSX.Element {
       {/* Playhead overlay */}
       <Playhead trackHeaderWidth={TRACK_HEADER_WIDTH} />
 
-      {/* Tool mode indicator */}
-      <div className="absolute top-8 right-2 z-20 flex gap-1">
+      {/* Tool mode indicator + snap controls */}
+      <div className="absolute top-8 right-2 z-20 flex items-center gap-1">
+        {/* Snap controls */}
+        <button
+          onClick={() => useUIStore.getState().toggleSnap()}
+          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+            snapEnabled
+              ? 'bg-rach-secondary/20 text-rach-secondary'
+              : 'bg-rach-surface text-rach-text-muted hover:text-rach-text'
+          }`}
+          title={snapEnabled ? 'Disable snap' : 'Enable snap'}
+        >
+          Snap
+        </button>
+        {snapEnabled && (
+          <select
+            value={snapGridSize}
+            onChange={(e) => useUIStore.getState().setSnapGridSize(Number(e.target.value))}
+            className="bg-rach-surface text-rach-text text-xs rounded border border-rach-border px-1 py-0.5"
+          >
+            <option value={0.25}>1/16</option>
+            <option value={0.5}>1/8</option>
+            <option value={1}>1/4</option>
+            <option value={2}>1/2</option>
+            <option value={4}>1 bar</option>
+          </select>
+        )}
+
+        <div className="w-px h-4 bg-rach-border" />
+
+        {/* Tool mode buttons */}
         {(['select', 'draw', 'erase'] as const).map((mode) => (
           <button
             key={mode}
             data-tutorial={mode === 'draw' ? 'tool-draw' : undefined}
             onClick={() => useUIStore.getState().setToolMode(mode)}
-            className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+            className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
               toolMode === mode
                 ? 'bg-rach-accent/20 text-rach-accent'
                 : 'bg-rach-surface text-rach-text-muted hover:text-rach-text'

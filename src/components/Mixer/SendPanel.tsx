@@ -28,11 +28,11 @@ export function SendPanel({ track }: SendPanelProps): React.JSX.Element {
     <div className="w-full">
       {sends.map((send) => {
         return (
-          <div key={send.id} className="flex items-center gap-0.5 px-0.5 py-0.5 text-[8px]">
+          <div key={send.id} className="flex items-center gap-0.5 px-0.5 py-0.5 text-[9px]">
             <select
               value={send.targetBusId}
               onChange={(e) => updateSend(track.id, send.id, { targetBusId: e.target.value })}
-              className="flex-1 bg-rach-bg border border-rach-border rounded text-[8px] px-0.5"
+              className="flex-1 bg-rach-bg border border-rach-border rounded text-[9px] px-0.5"
               onClick={(e) => e.stopPropagation()}
             >
               {busTracks.map((bt) => (
@@ -54,16 +54,16 @@ export function SendPanel({ track }: SendPanelProps): React.JSX.Element {
                 e.stopPropagation();
                 updateSend(track.id, send.id, { preFader: !send.preFader });
               }}
-              className={`text-[7px] px-0.5 rounded ${send.preFader ? 'text-rach-accent' : 'text-rach-text-muted'}`}
-              title={send.preFader ? 'Pre-fader' : 'Post-fader'}
+              className={`text-[9px] px-0.5 rounded ${send.preFader ? 'text-rach-accent' : 'text-rach-text-muted'}`}
+              title={send.preFader ? 'Pre-fader (click for post)' : 'Post-fader (click for pre)'}
             >
               {send.preFader ? 'Pre' : 'Post'}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); removeSend(track.id, send.id); }}
-              className="text-rach-text-muted hover:text-red-400"
+              className="p-0.5 text-rach-text-muted hover:text-red-400"
             >
-              <X size={7} />
+              <X size={11} />
             </button>
           </div>
         );
@@ -72,9 +72,9 @@ export function SendPanel({ track }: SendPanelProps): React.JSX.Element {
       {busTracks.length > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); handleAddSend(); }}
-          className="flex items-center gap-0.5 text-[8px] text-rach-text-muted hover:text-rach-text px-0.5 py-0.5"
+          className="flex items-center gap-0.5 text-[9px] text-rach-text-muted hover:text-rach-text px-0.5 py-1"
         >
-          <Plus size={7} />
+          <Plus size={11} />
           Send
         </button>
       )}

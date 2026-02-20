@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Trash2, Activity } from 'lucide-react';
 import type { Track } from '../../core/models';
 import { TRACK_COLOR_MAP } from '../../core/models';
@@ -19,6 +19,15 @@ const TrackHeader = React.memo(function TrackHeader({ track, onSynthChange }: Tr
   const showAutomation = automationVisibility[track.id] ?? false;
   const color = TRACK_COLOR_MAP[track.color];
   const isMidiTrack = track.type === 'midi' || track.type === 'instrument';
+
+  const [deleteConfirmPending, setDeleteConfirmPending] = useState(false);
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <div
@@ -129,12 +138,23 @@ const TrackHeader = React.memo(function TrackHeader({ track, onSynthChange }: Tr
         <button
           onClick={(e) => {
             e.stopPropagation();
-            removeTrack(track.id);
+            if (deleteConfirmPending) {
+              if (deleteTimeoutRef.current) clearTimeout(deleteTimeoutRef.current);
+              setDeleteConfirmPending(false);
+              removeTrack(track.id);
+            } else {
+              setDeleteConfirmPending(true);
+              deleteTimeoutRef.current = setTimeout(() => setDeleteConfirmPending(false), 2500);
+            }
           }}
-          className="w-6 h-5 rounded text-rach-text-muted hover:text-red-400 transition-colors flex items-center justify-center"
-          title="Delete Track"
+          className={`w-6 h-5 rounded text-[10px] font-bold transition-colors flex items-center justify-center ${
+            deleteConfirmPending
+              ? 'text-red-400 ring-1 ring-red-500'
+              : 'text-rach-text-muted hover:text-red-400'
+          }`}
+          title={deleteConfirmPending ? 'Click again to confirm delete' : 'Delete Track'}
         >
-          <Trash2 size={10} />
+          {deleteConfirmPending ? '✕?' : <Trash2 size={10} />}
         </button>
       </div>
     </div>

@@ -85,33 +85,33 @@ export function EffectRack({ trackId, effects }: EffectRackProps): React.JSX.Ele
                   e.stopPropagation();
                   updateEffect(trackId, effect.id, { enabled: !effect.enabled });
                 }}
-                className={`shrink-0 ${effect.enabled ? 'text-green-400' : 'text-rach-text-muted'}`}
+                className={`shrink-0 p-0.5 ${effect.enabled ? 'text-green-400' : 'text-rach-text-muted'}`}
                 title={effect.enabled ? 'Disable' : 'Enable'}
               >
-                <Power size={8} />
+                <Power size={12} />
               </button>
               <span className="flex-1 truncate">{effect.name}</span>
               <div className="flex shrink-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleMoveUp(index); }}
-                  className="text-rach-text-muted hover:text-rach-text"
+                  className="p-0.5 text-rach-text-muted hover:text-rach-text"
                   title="Move up"
                 >
-                  <ChevronUp size={8} />
+                  <ChevronUp size={12} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleMoveDown(index); }}
-                  className="text-rach-text-muted hover:text-rach-text"
+                  className="p-0.5 text-rach-text-muted hover:text-rach-text"
                   title="Move down"
                 >
-                  <ChevronDown size={8} />
+                  <ChevronDown size={12} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); removeEffect(trackId, effect.id); }}
-                  className="text-rach-text-muted hover:text-red-400"
+                  className="p-0.5 text-rach-text-muted hover:text-red-400"
                   title="Remove"
                 >
-                  <X size={8} />
+                  <X size={12} />
                 </button>
               </div>
             </div>
@@ -127,9 +127,9 @@ export function EffectRack({ trackId, effects }: EffectRackProps): React.JSX.Ele
         <button
           ref={addBtnRef}
           onClick={() => setShowAddMenu(!showAddMenu)}
-          className="flex items-center gap-0.5 text-[9px] text-rach-text-muted hover:text-rach-text px-1 py-0.5"
+          className="flex items-center gap-0.5 text-xs text-rach-text-muted hover:text-rach-text px-1 py-1"
         >
-          <Plus size={8} />
+          <Plus size={12} />
           Add Effect
         </button>
 

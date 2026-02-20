@@ -73,7 +73,7 @@ const MixerStrip = React.memo(function MixerStrip({ track }: MixerStripProps): R
             value={track.volume}
             onChange={handleVolumeChange}
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 w-full h-full mixer-fader-vertical"
             style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
           />
         </div>
@@ -115,6 +115,7 @@ const MixerStrip = React.memo(function MixerStrip({ track }: MixerStripProps): R
           className={`w-5 h-4 rounded text-[9px] font-bold transition-colors ${
             track.muted ? 'bg-yellow-500/20 text-yellow-500' : 'text-rach-text-muted'
           }`}
+          title="Mute"
         >
           M
         </button>
@@ -126,6 +127,7 @@ const MixerStrip = React.memo(function MixerStrip({ track }: MixerStripProps): R
           className={`w-5 h-4 rounded text-[9px] font-bold transition-colors ${
             track.soloed ? 'bg-rach-accent/20 text-rach-accent' : 'text-rach-text-muted'
           }`}
+          title="Solo"
         >
           S
         </button>

@@ -18,10 +18,10 @@ export function MixerPanel(): React.JSX.Element {
       <button
         data-tutorial="mixer-toggle"
         onClick={() => togglePanel('mixer')}
-        className="w-full h-6 bg-rach-surface flex items-center justify-center hover:bg-rach-surface-light transition-colors"
+        className="w-full h-8 bg-rach-surface flex items-center justify-center hover:bg-rach-surface-light transition-colors"
       >
-        {isVisible ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-        <span className="text-[10px] text-rach-text-muted ml-1">MIXER</span>
+        {isVisible ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        <span className="text-xs text-rach-text-muted ml-1">MIXER</span>
       </button>
 
       {isVisible && (
@@ -36,13 +36,30 @@ export function MixerPanel(): React.JSX.Element {
                 <MixerStrip key={track.id} track={track} />
               ))}
               {/* Master strip */}
-              <div className="w-20 shrink-0 flex flex-col items-center py-2 px-1 bg-rach-surface-light border-l-2 border-rach-primary">
+              <div className="w-24 shrink-0 flex flex-col items-center py-2 px-1 bg-rach-surface-light border-l-2 border-rach-primary">
                 <div className="text-[10px] text-rach-primary font-bold mb-2">MASTER</div>
                 <div className="flex-1 flex items-center justify-center gap-1">
-                  <div className="w-4 h-28 bg-rach-bg rounded relative">
+                  <div className="relative w-4 h-28 bg-rach-bg rounded">
                     <div
                       className="w-full rounded-b bg-rach-primary/50 absolute bottom-0"
-                      style={{ height: '80%' }}
+                      style={{ height: `${Math.max(0, Math.min(100, ((project.masterBus.volume + 60) / 66) * 100))}%` }}
+                    />
+                    <input
+                      type="range"
+                      min={-60}
+                      max={6}
+                      step={0.1}
+                      value={project.masterBus.volume}
+                      onChange={(e) => {
+                        useProjectStore.setState((state) => ({
+                          project: {
+                            ...state.project,
+                            masterBus: { ...state.project.masterBus, volume: Number(e.target.value) },
+                          },
+                        }));
+                      }}
+                      className="absolute inset-0 w-full h-full mixer-fader-vertical"
+                      style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
                     />
                   </div>
                   <VUMeter analyserNode={audioEngine.getMasterAnalyser()} />

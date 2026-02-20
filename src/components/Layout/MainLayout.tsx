@@ -7,6 +7,7 @@ import { TemplateBrowser } from '../Templates/TemplateBrowser';
 import { TutorialOverlay } from '../Tutorial/TutorialOverlay';
 import { useUIStore } from '../../stores/ui-store';
 import { useProjectStore } from '../../stores/project-store';
+import { useTutorialStore } from '../../stores/tutorial-store';
 
 // Lazy-loaded heavy components
 const PianoRoll = React.lazy(() =>
@@ -25,14 +26,14 @@ function LazyFallback(): React.JSX.Element {
 }
 
 export function MainLayout(): React.JSX.Element {
-  const { panelVisibility, activeView, setActiveView, templateBrowserOpen } = useUIStore();
+  const { panelVisibility, activeView, setActiveView, togglePanel, setTemplateBrowserOpen, templateBrowserOpen } = useUIStore();
   const selectedClipId = useProjectStore((s) => s.selectedClipId);
 
   // Show piano roll if a clip is selected and pianoRoll panel is visible
   const showPianoRoll = panelVisibility.pianoRoll || selectedClipId !== null;
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-rach-bg overflow-hidden">
+    <div className="h-screen w-full max-w-[1920px] mx-auto flex flex-col bg-rach-bg overflow-hidden">
       {/* Transport bar */}
       <TransportBar />
 
@@ -40,7 +41,7 @@ export function MainLayout(): React.JSX.Element {
       <div className="flex items-center gap-1 px-2 py-0.5 bg-rach-surface border-b border-rach-border shrink-0">
         <button
           onClick={() => setActiveView('timeline')}
-          className={`px-3 py-0.5 rounded text-[10px] font-medium transition-colors ${
+          className={`px-3 py-0.5 rounded text-xs font-medium transition-colors ${
             activeView === 'timeline'
               ? 'bg-rach-accent/20 text-rach-accent'
               : 'text-rach-text-muted hover:text-rach-text'
@@ -50,13 +51,38 @@ export function MainLayout(): React.JSX.Element {
         </button>
         <button
           onClick={() => setActiveView('session')}
-          className={`px-3 py-0.5 rounded text-[10px] font-medium transition-colors ${
+          className={`px-3 py-0.5 rounded text-xs font-medium transition-colors ${
             activeView === 'session'
               ? 'bg-rach-accent/20 text-rach-accent'
               : 'text-rach-text-muted hover:text-rach-text'
           }`}
         >
           Session
+        </button>
+
+        <div className="flex-1" />
+
+        <button
+          onClick={() => togglePanel('ai')}
+          className={`px-3 py-0.5 rounded text-xs font-medium transition-colors ${
+            panelVisibility.ai
+              ? 'bg-rach-accent/20 text-rach-accent'
+              : 'text-rach-text-muted hover:text-rach-text'
+          }`}
+        >
+          AI
+        </button>
+        <button
+          onClick={() => setTemplateBrowserOpen(true)}
+          className="px-3 py-0.5 rounded text-xs font-medium transition-colors text-rach-text-muted hover:text-rach-text"
+        >
+          Templates
+        </button>
+        <button
+          onClick={() => useTutorialStore.getState().startTutorial()}
+          className="px-3 py-0.5 rounded text-xs font-medium transition-colors text-rach-text-muted hover:text-rach-text"
+        >
+          Help
         </button>
       </div>
 

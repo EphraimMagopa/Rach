@@ -119,7 +119,12 @@ const NoteBlock = React.memo(function NoteBlock({
       onMouseDown={handleMouseDown}
     >
       {/* Resize handle */}
-      <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize" />
+      {width > 8 && (
+        <div
+          className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.35)' }}
+        />
+      )}
     </div>
   );
 });
