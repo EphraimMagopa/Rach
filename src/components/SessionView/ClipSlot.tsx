@@ -1,3 +1,4 @@
+import React from 'react';
 import { Play, Square, Clock } from 'lucide-react';
 import type { SessionClipSlot } from '../../core/models/session';
 import { TRACK_COLOR_MAP } from '../../core/models';
@@ -10,7 +11,7 @@ interface ClipSlotProps {
   onStop: (slotId: string) => void;
 }
 
-export function ClipSlot({ slot, trackColor, onLaunch, onStop }: ClipSlotProps): React.JSX.Element {
+const ClipSlot = React.memo(function ClipSlot({ slot, trackColor, onLaunch, onStop }: ClipSlotProps): React.JSX.Element {
   const color = TRACK_COLOR_MAP[trackColor];
   const hasClip = slot.clip !== null;
   const isPlaying = slot.launchState === 'playing';
@@ -60,4 +61,6 @@ export function ClipSlot({ slot, trackColor, onLaunch, onStop }: ClipSlotProps):
       )}
     </div>
   );
-}
+});
+
+export { ClipSlot };

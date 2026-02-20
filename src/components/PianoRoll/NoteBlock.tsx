@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import type { MIDINote } from '../../core/models';
 
 interface NoteBlockProps {
@@ -17,7 +17,7 @@ interface NoteBlockProps {
   onResize: (noteId: string, newDuration: number) => void;
 }
 
-export function NoteBlock({
+const NoteBlock = React.memo(function NoteBlock({
   note,
   beatWidth,
   rowHeight,
@@ -122,4 +122,6 @@ export function NoteBlock({
       <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize" />
     </div>
   );
-}
+});
+
+export { NoteBlock };

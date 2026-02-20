@@ -1,3 +1,4 @@
+import React from 'react';
 import { ChevronDown, ChevronRight, Wrench, BarChart3, Music, Sliders, Waves } from 'lucide-react';
 import { useState } from 'react';
 import type { ToolExecution } from '../../core/models/mutations';
@@ -32,7 +33,7 @@ interface ToolExecutionCardProps {
   execution: ToolExecution;
 }
 
-export function ToolExecutionCard({ execution }: ToolExecutionCardProps): React.JSX.Element {
+const ToolExecutionCard = React.memo(function ToolExecutionCard({ execution }: ToolExecutionCardProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const Icon = TOOL_ICONS[execution.name] || Wrench;
   const label = TOOL_LABELS[execution.name] || execution.name;
@@ -70,4 +71,6 @@ export function ToolExecutionCard({ execution }: ToolExecutionCardProps): React.
       )}
     </div>
   );
-}
+});
+
+export { ToolExecutionCard };

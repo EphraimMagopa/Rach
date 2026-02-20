@@ -26,6 +26,11 @@ function createMenu(window: BrowserWindow): Menu {
           click: () => window.webContents.send('menu:new-project')
         },
         {
+          label: 'New from Template...',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: () => window.webContents.send('menu:new-from-template')
+        },
+        {
           label: 'Open...',
           accelerator: 'CmdOrCtrl+O',
           click: () => window.webContents.send('menu:open')
@@ -144,6 +149,11 @@ function createMenu(window: BrowserWindow): Menu {
     {
       label: 'Help',
       submenu: [
+        {
+          label: 'Interactive Tutorial',
+          click: () => window.webContents.send('menu:start-tutorial')
+        },
+        { type: 'separator' },
         {
           label: 'About Rach',
           click: () => {

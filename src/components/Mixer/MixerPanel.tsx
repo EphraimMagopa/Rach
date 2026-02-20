@@ -6,8 +6,9 @@ import { MixerStrip } from './MixerStrip';
 import { VUMeter } from './VUMeter';
 
 export function MixerPanel(): React.JSX.Element {
-  const { project } = useProjectStore();
-  const { panelVisibility, togglePanel } = useUIStore();
+  const project = useProjectStore((s) => s.project);
+  const panelVisibility = useUIStore((s) => s.panelVisibility);
+  const togglePanel = useUIStore((s) => s.togglePanel);
   const { engine: audioEngine } = useAudioEngine();
   const isVisible = panelVisibility.mixer;
 
@@ -15,6 +16,7 @@ export function MixerPanel(): React.JSX.Element {
     <div className="border-t border-rach-border shrink-0">
       {/* Toggle bar */}
       <button
+        data-tutorial="mixer-toggle"
         onClick={() => togglePanel('mixer')}
         className="w-full h-6 bg-rach-surface flex items-center justify-center hover:bg-rach-surface-light transition-colors"
       >

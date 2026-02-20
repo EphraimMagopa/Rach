@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useTransportStore } from '../../stores/transport-store';
 import { useUIStore } from '../../stores/ui-store';
 import { getTransportEngine } from '../../hooks/use-transport';
 
-export function TimelineRuler(): React.JSX.Element {
+const TimelineRuler = React.memo(function TimelineRuler(): React.JSX.Element {
   const { timeSignature } = useTransportStore();
   const { zoomX, scrollX } = useUIStore();
 
@@ -59,4 +59,6 @@ export function TimelineRuler(): React.JSX.Element {
       </div>
     </div>
   );
-}
+});
+
+export { TimelineRuler };

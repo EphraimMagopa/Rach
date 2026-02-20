@@ -1,3 +1,4 @@
+import React from 'react';
 import { Play } from 'lucide-react';
 import type { Scene } from '../../core/models/session';
 
@@ -6,7 +7,7 @@ interface SceneRowProps {
   onLaunchScene: (sceneIndex: number) => void;
 }
 
-export function SceneRow({ scene, onLaunchScene }: SceneRowProps): React.JSX.Element {
+const SceneRow = React.memo(function SceneRow({ scene, onLaunchScene }: SceneRowProps): React.JSX.Element {
   return (
     <div className="flex items-center h-10">
       <button
@@ -19,4 +20,6 @@ export function SceneRow({ scene, onLaunchScene }: SceneRowProps): React.JSX.Ele
       </button>
     </div>
   );
-}
+});
+
+export { SceneRow };

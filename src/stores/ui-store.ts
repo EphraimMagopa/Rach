@@ -16,6 +16,7 @@ interface UIState {
   snapGridSize: number;
   automationVisibility: Record<string, boolean>;  // trackId → visible
   activeView: ActiveView;
+  templateBrowserOpen: boolean;
 
   setZoomX: (zoom: number) => void;
   setZoomY: (zoom: number) => void;
@@ -27,6 +28,7 @@ interface UIState {
   setSnapGridSize: (size: number) => void;
   toggleAutomationLane: (trackId: string) => void;
   setActiveView: (view: ActiveView) => void;
+  setTemplateBrowserOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -44,6 +46,7 @@ export const useUIStore = create<UIState>((set) => ({
   snapGridSize: 0.25,
   automationVisibility: {},
   activeView: 'timeline',
+  templateBrowserOpen: false,
 
   setZoomX: (zoomX) => set({ zoomX }),
   setZoomY: (zoomY) => set({ zoomY }),
@@ -73,4 +76,5 @@ export const useUIStore = create<UIState>((set) => ({
       },
     })),
   setActiveView: (activeView) => set({ activeView }),
+  setTemplateBrowserOpen: (templateBrowserOpen) => set({ templateBrowserOpen }),
 }));

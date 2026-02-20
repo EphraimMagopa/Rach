@@ -271,7 +271,7 @@ export function AIPanel(): React.JSX.Element {
   );
 
   return (
-    <div className="w-72 border-l border-rach-border flex flex-col bg-rach-surface shrink-0">
+    <div className="w-72 border-l border-rach-border flex flex-col bg-rach-surface shrink-0" data-tutorial="ai-panel">
       {/* Header */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-rach-border">
         <div className="flex items-center gap-1.5">

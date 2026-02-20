@@ -6,6 +6,8 @@ import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
 import { useMixer } from './hooks/use-mixer';
 import { useEffects } from './hooks/use-effects';
 import { useProjectPersistence } from './hooks/use-project-persistence';
+import { useTutorialWatcher } from './hooks/use-tutorial-watcher';
+import { useTutorialStore } from './stores/tutorial-store';
 import * as Tone from 'tone';
 
 function App(): React.JSX.Element {
@@ -18,6 +20,15 @@ function App(): React.JSX.Element {
   useMixer(audioEngine);
   useEffects(audioEngine);
   useProjectPersistence();
+  useTutorialWatcher();
+
+  // First-run: auto-start tutorial if not yet completed
+  useEffect(() => {
+    const { hasCompletedTutorial, startTutorial } = useTutorialStore.getState();
+    if (!hasCompletedTutorial) {
+      startTutorial();
+    }
+  }, []);
 
   const handleUserGesture = useCallback(async () => {
     if (audioReady) return;

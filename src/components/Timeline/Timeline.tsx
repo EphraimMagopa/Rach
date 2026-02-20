@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useProjectStore } from '../../stores/project-store';
 import { useUIStore } from '../../stores/ui-store';
@@ -60,24 +60,40 @@ function createEmptyClip(trackId: string, startBeat: number, color: string): Cli
 }
 
 export function Timeline(): React.JSX.Element {
-  const { project, addTrack, addClip, selectClip, selectTrack } = useProjectStore();
-  const { zoomX, setScroll, toolMode, automationVisibility } = useUIStore();
+  const project = useProjectStore((s) => s.project);
+  const addTrack = useProjectStore((s) => s.addTrack);
+  const addClip = useProjectStore((s) => s.addClip);
+  const selectClip = useProjectStore((s) => s.selectClip);
+  const selectTrack = useProjectStore((s) => s.selectTrack);
+  const zoomX = useUIStore((s) => s.zoomX);
+  const setScroll = useUIStore((s) => s.setScroll);
+  const toolMode = useUIStore((s) => s.toolMode);
+  const automationVisibility = useUIStore((s) => s.automationVisibility);
   const timeSignature = useTransportStore((s) => s.timeSignature);
   const { engine: audioEngine } = useAudioEngine();
   const tracks = project.tracks;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
 
   const beatsPerBar = timeSignature[0];
   const barWidth = 120 * zoomX;
   const beatWidth = barWidth / beatsPerBar;
   const totalBars = 64;
   const gridWidth = barWidth * totalBars;
+  const trackHeight = 64; // matches h-16
 
-  // Sync scroll position to store
+  // Memoize grid lines array
+  const gridLines = useMemo(
+    () => Array.from({ length: totalBars }, (_, i) => i),
+    [totalBars],
+  );
+
+  // Sync scroll position to store + virtualization
   const handleScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const el = scrollContainerRef.current;
       setScroll(el.scrollLeft, el.scrollTop);
+      setScrollTop(el.scrollTop);
     }
   }, [setScroll]);
 
@@ -244,66 +260,93 @@ export function Timeline(): React.JSX.Element {
         onScroll={handleScroll}
       >
         <div className="flex flex-col">
-          {tracks.map((track) => {
-            const showAutomation = automationVisibility[track.id] ?? false;
+          {(() => {
+            // Track virtualization: only render visible tracks when > 12
+            const useVirtualization = tracks.length > 12;
+            const overscan = 3;
+            const containerHeight = scrollContainerRef.current?.clientHeight ?? 600;
+
+            let startIdx = 0;
+            let endIdx = tracks.length;
+            let topPadding = 0;
+            let bottomPadding = 0;
+
+            if (useVirtualization) {
+              startIdx = Math.max(0, Math.floor(scrollTop / trackHeight) - overscan);
+              endIdx = Math.min(tracks.length, Math.ceil((scrollTop + containerHeight) / trackHeight) + overscan);
+              topPadding = startIdx * trackHeight;
+              bottomPadding = Math.max(0, (tracks.length - endIdx) * trackHeight);
+            }
+
+            const visibleTracks = tracks.slice(startIdx, endIdx);
+
             return (
-              <div key={track.id}>
-                <div className="flex">
-                  {/* Header */}
-                  <div
-                    className="shrink-0 border-r border-rach-border sticky left-0 z-10"
-                    style={{ width: TRACK_HEADER_WIDTH }}
-                  >
-                    <TrackHeader track={track} onSynthChange={handleSynthChange} />
-                  </div>
-                  {/* Track lane */}
-                  <div
-                    className="h-16 border-b border-rach-border relative"
-                    style={{ width: gridWidth }}
-                    onClick={(e) => handleLaneClick(e, track)}
-                    onDrop={(e) => handleDrop(e, track)}
-                    onDragOver={handleDragOver}
-                  >
-                    {/* Grid lines */}
-                    {Array.from({ length: totalBars }, (_, i) => (
-                      <div
-                        key={i}
-                        className="absolute top-0 h-full border-r border-rach-border/30"
-                        style={{ left: i * barWidth }}
-                      />
-                    ))}
-                    {/* Clips */}
-                    {track.clips.map((clip) => (
-                      <ClipView key={clip.id} clip={clip} trackId={track.id} />
-                    ))}
-                  </div>
-                </div>
-                {/* Automation lanes */}
-                {showAutomation && track.automationLanes.map((lane) => (
-                  <div key={lane.id} className="flex">
-                    <div
-                      className="shrink-0 border-r border-rach-border sticky left-0 z-10"
-                      style={{ width: TRACK_HEADER_WIDTH }}
-                    >
-                      <AutomationLaneHeader lane={lane} trackId={track.id} />
+              <>
+                {topPadding > 0 && <div style={{ height: topPadding }} />}
+                {visibleTracks.map((track) => {
+                  const showAutomation = automationVisibility[track.id] ?? false;
+                  return (
+                    <div key={track.id}>
+                      <div className="flex">
+                        {/* Header */}
+                        <div
+                          className="shrink-0 border-r border-rach-border sticky left-0 z-10"
+                          style={{ width: TRACK_HEADER_WIDTH }}
+                        >
+                          <TrackHeader track={track} onSynthChange={handleSynthChange} />
+                        </div>
+                        {/* Track lane */}
+                        <div
+                          className="h-16 border-b border-rach-border relative"
+                          style={{ width: gridWidth }}
+                          onClick={(e) => handleLaneClick(e, track)}
+                          onDrop={(e) => handleDrop(e, track)}
+                          onDragOver={handleDragOver}
+                        >
+                          {/* Grid lines (memoized) */}
+                          {gridLines.map((i) => (
+                            <div
+                              key={i}
+                              className="absolute top-0 h-full border-r border-rach-border/30"
+                              style={{ left: i * barWidth }}
+                            />
+                          ))}
+                          {/* Clips */}
+                          {track.clips.map((clip) => (
+                            <ClipView key={clip.id} clip={clip} trackId={track.id} />
+                          ))}
+                        </div>
+                      </div>
+                      {/* Automation lanes */}
+                      {showAutomation && track.automationLanes.map((lane) => (
+                        <div key={lane.id} className="flex">
+                          <div
+                            className="shrink-0 border-r border-rach-border sticky left-0 z-10"
+                            style={{ width: TRACK_HEADER_WIDTH }}
+                          >
+                            <AutomationLaneHeader lane={lane} trackId={track.id} />
+                          </div>
+                          <div
+                            className="border-b border-rach-border/50 bg-rach-bg/30"
+                            style={{ width: gridWidth }}
+                          >
+                            <AutomationLaneView
+                              lane={lane}
+                              trackId={track.id}
+                              barWidth={barWidth}
+                              totalBars={totalBars}
+                              beatsPerBar={beatsPerBar}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div
-                      className="border-b border-rach-border/50 bg-rach-bg/30"
-                      style={{ width: gridWidth }}
-                    >
-                      <AutomationLaneView
-                        lane={lane}
-                        trackId={track.id}
-                        barWidth={barWidth}
-                        totalBars={totalBars}
-                        beatsPerBar={beatsPerBar}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  );
+                })}
+                {bottomPadding > 0 && <div style={{ height: bottomPadding }} />}
+              </>
             );
-          })}
+          })()}
 
           {/* Add track buttons */}
           <div className="flex items-center gap-2 p-3" style={{ marginLeft: 0 }}>
@@ -315,6 +358,7 @@ export function Timeline(): React.JSX.Element {
               Audio Track
             </button>
             <button
+              data-tutorial="add-midi-track"
               onClick={() => handleAddTrack('midi')}
               className="flex items-center gap-1 px-2 py-1 rounded text-xs text-rach-text-muted hover:text-rach-text hover:bg-rach-surface-light transition-colors"
             >
@@ -340,6 +384,7 @@ export function Timeline(): React.JSX.Element {
         {(['select', 'draw', 'erase'] as const).map((mode) => (
           <button
             key={mode}
+            data-tutorial={mode === 'draw' ? 'tool-draw' : undefined}
             onClick={() => useUIStore.getState().setToolMode(mode)}
             className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
               toolMode === mode

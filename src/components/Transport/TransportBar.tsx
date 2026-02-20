@@ -41,7 +41,7 @@ export function TransportBar(): React.JSX.Element {
   } = useTransportStore()
 
   return (
-    <div className="h-12 bg-rach-surface border-b border-rach-border flex items-center px-4 gap-2 shrink-0">
+    <div className="h-12 bg-rach-surface border-b border-rach-border flex items-center px-4 gap-2 shrink-0" data-tutorial="transport-bar">
       {/* Transport controls */}
       <div className="flex items-center gap-1">
         <button
@@ -53,6 +53,7 @@ export function TransportBar(): React.JSX.Element {
         </button>
 
         <button
+          data-tutorial="play-button"
           onClick={isPlaying ? pause : play}
           className={`p-1.5 rounded transition-colors ${
             isPlaying

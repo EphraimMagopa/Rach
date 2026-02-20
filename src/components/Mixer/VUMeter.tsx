@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface VUMeterProps {
   analyserNode: AnalyserNode | null;
   height?: number;
 }
 
-export function VUMeter({ analyserNode, height = 112 }: VUMeterProps): React.JSX.Element {
+const VUMeter = React.memo(function VUMeter({ analyserNode, height = 112 }: VUMeterProps): React.JSX.Element {
   const [level, setLevel] = useState(0);
   const rafRef = useRef<number | null>(null);
   const dataRef = useRef<Float32Array<ArrayBuffer> | null>(null);
@@ -61,4 +61,6 @@ export function VUMeter({ analyserNode, height = 112 }: VUMeterProps): React.JSX
       />
     </div>
   );
-}
+});
+
+export { VUMeter };

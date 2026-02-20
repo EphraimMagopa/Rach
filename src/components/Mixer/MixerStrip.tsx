@@ -1,3 +1,4 @@
+import React, { useCallback } from 'react';
 import type { Track } from '../../core/models';
 import { TRACK_COLOR_MAP } from '../../core/models';
 import { useProjectStore } from '../../stores/project-store';
@@ -10,7 +11,7 @@ interface MixerStripProps {
   track: Track;
 }
 
-export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
+const MixerStrip = React.memo(function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
   const { selectedTrackId, selectTrack, updateTrack } = useProjectStore();
   const { engine: audioEngine } = useAudioEngine();
   const isSelected = selectedTrackId === track.id;
@@ -18,6 +19,16 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
 
   const volumePercent = Math.max(0, Math.min(100, ((track.volume + 60) / 66) * 100));
   const trackNode = audioEngine.getTrackNode(track.id);
+
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    updateTrack(track.id, { volume: Number(e.target.value) });
+  }, [track.id, updateTrack]);
+
+  const handlePanChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    updateTrack(track.id, { pan: Number(e.target.value) / 100 });
+  }, [track.id, updateTrack]);
 
   return (
     <div
@@ -44,7 +55,7 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
       )}
 
       {/* Volume fader + VU meter */}
-      <div className="flex-1 flex items-center justify-center gap-1 w-full mb-1">
+      <div className="flex-1 flex items-center justify-center gap-1 w-full mb-1" data-tutorial="mixer-fader">
         <div className="relative w-4 h-20 bg-rach-bg rounded">
           <div
             className="absolute bottom-0 w-full rounded-b transition-all"
@@ -60,10 +71,7 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
             max={6}
             step={0.1}
             value={track.volume}
-            onChange={(e) => {
-              e.stopPropagation();
-              updateTrack(track.id, { volume: Number(e.target.value) });
-            }}
+            onChange={handleVolumeChange}
             onClick={(e) => e.stopPropagation()}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
@@ -84,10 +92,7 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
           min={-100}
           max={100}
           value={Math.round(track.pan * 100)}
-          onChange={(e) => {
-            e.stopPropagation();
-            updateTrack(track.id, { pan: Number(e.target.value) / 100 });
-          }}
+          onChange={handlePanChange}
           onClick={(e) => e.stopPropagation()}
           className="w-14 h-2 cursor-pointer"
         />
@@ -130,4 +135,6 @@ export function MixerStrip({ track }: MixerStripProps): React.JSX.Element {
       <div className="w-full h-1 mt-1 rounded" style={{ backgroundColor: color }} />
     </div>
   );
-}
+});
+
+export { MixerStrip };

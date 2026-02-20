@@ -1,3 +1,4 @@
+import React from 'react';
 import { Trash2, Activity } from 'lucide-react';
 import type { Track } from '../../core/models';
 import { TRACK_COLOR_MAP } from '../../core/models';
@@ -11,7 +12,7 @@ interface TrackHeaderProps {
   onSynthChange?: (trackId: string, synthType: SynthType) => void;
 }
 
-export function TrackHeader({ track, onSynthChange }: TrackHeaderProps): React.JSX.Element {
+const TrackHeader = React.memo(function TrackHeader({ track, onSynthChange }: TrackHeaderProps): React.JSX.Element {
   const { selectedTrackId, selectTrack, updateTrack, removeTrack, addAutomationLane } = useProjectStore();
   const { automationVisibility, toggleAutomationLane } = useUIStore();
   const isSelected = selectedTrackId === track.id;
@@ -138,4 +139,6 @@ export function TrackHeader({ track, onSynthChange }: TrackHeaderProps): React.J
       </div>
     </div>
   );
-}
+});
+
+export { TrackHeader };

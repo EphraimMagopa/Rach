@@ -68,7 +68,7 @@ export function EffectRack({ trackId, effects }: EffectRackProps): React.JSX.Ele
   );
 
   return (
-    <div className="w-full">
+    <div className="w-full" data-tutorial="effect-rack">
       {/* Effect list */}
       <div className="space-y-0.5">
         {effects.map((effect, index) => (

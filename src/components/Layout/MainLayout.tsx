@@ -1,14 +1,31 @@
+import React, { Suspense } from 'react';
 import { TransportBar } from '../Transport/TransportBar';
 import { Timeline } from '../Timeline/Timeline';
-import { SessionView } from '../SessionView/SessionView';
 import { MixerPanel } from '../Mixer/MixerPanel';
-import { PianoRoll } from '../PianoRoll/PianoRoll';
 import { AIPanel } from '../AI/AIPanel';
+import { TemplateBrowser } from '../Templates/TemplateBrowser';
+import { TutorialOverlay } from '../Tutorial/TutorialOverlay';
 import { useUIStore } from '../../stores/ui-store';
 import { useProjectStore } from '../../stores/project-store';
 
+// Lazy-loaded heavy components
+const PianoRoll = React.lazy(() =>
+  import('../PianoRoll/PianoRoll').then((m) => ({ default: m.PianoRoll }))
+);
+const SessionView = React.lazy(() =>
+  import('../SessionView/SessionView').then((m) => ({ default: m.SessionView }))
+);
+
+function LazyFallback(): React.JSX.Element {
+  return (
+    <div className="flex-1 flex items-center justify-center text-sm text-rach-text-muted">
+      Loading...
+    </div>
+  );
+}
+
 export function MainLayout(): React.JSX.Element {
-  const { panelVisibility, activeView, setActiveView } = useUIStore();
+  const { panelVisibility, activeView, setActiveView, templateBrowserOpen } = useUIStore();
   const selectedClipId = useProjectStore((s) => s.selectedClipId);
 
   // Show piano roll if a clip is selected and pianoRoll panel is visible
@@ -45,7 +62,9 @@ export function MainLayout(): React.JSX.Element {
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
-        {activeView === 'timeline' ? <Timeline /> : <SessionView />}
+        <Suspense fallback={<LazyFallback />}>
+          {activeView === 'timeline' ? <Timeline /> : <SessionView />}
+        </Suspense>
 
         {/* AI panel (right side, toggleable) */}
         {panelVisibility.ai && <AIPanel />}
@@ -54,12 +73,20 @@ export function MainLayout(): React.JSX.Element {
       {/* Piano Roll (bottom, shown when clip selected in timeline view) */}
       {activeView === 'timeline' && showPianoRoll && (
         <div className="h-52 border-t border-rach-border shrink-0">
-          <PianoRoll />
+          <Suspense fallback={<LazyFallback />}>
+            <PianoRoll />
+          </Suspense>
         </div>
       )}
 
       {/* Mixer panel (bottom, toggleable) */}
       <MixerPanel />
+
+      {/* Template browser modal */}
+      {templateBrowserOpen && <TemplateBrowser />}
+
+      {/* Tutorial overlay */}
+      <TutorialOverlay />
     </div>
   );
 }

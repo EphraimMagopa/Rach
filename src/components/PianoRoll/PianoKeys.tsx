@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { getInstrumentManager } from '../../hooks/use-transport';
 import { useProjectStore } from '../../stores/project-store';
 
@@ -27,7 +27,7 @@ export function buildKeyList(): KeyInfo[] {
   }).reverse();
 }
 
-export function PianoKeys({ keys, rowHeight }: PianoKeysProps): React.JSX.Element {
+const PianoKeys = React.memo(function PianoKeys({ keys, rowHeight }: PianoKeysProps): React.JSX.Element {
   const previewNote = useCallback((pitch: number) => {
     const selectedClipId = useProjectStore.getState().selectedClipId;
     if (!selectedClipId) return;
@@ -63,4 +63,6 @@ export function PianoKeys({ keys, rowHeight }: PianoKeysProps): React.JSX.Elemen
       ))}
     </div>
   );
-}
+});
+
+export { PianoKeys };

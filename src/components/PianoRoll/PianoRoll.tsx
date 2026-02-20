@@ -145,7 +145,7 @@ export function PianoRoll(): React.JSX.Element {
   const notes = selectedClip.midiData?.notes || [];
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-rach-bg">
+    <div className="flex-1 flex flex-col overflow-hidden bg-rach-bg" data-tutorial="piano-roll">
       {/* Header */}
       <div className="h-6 bg-rach-surface border-b border-rach-border flex items-center px-3 gap-3">
         <span className="text-[10px] text-rach-text-muted uppercase tracking-wider">

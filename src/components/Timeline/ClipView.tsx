@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import type { Clip } from '../../core/models';
 import { useUIStore } from '../../stores/ui-store';
 import { useProjectStore } from '../../stores/project-store';
@@ -9,7 +10,7 @@ interface ClipViewProps {
   trackId: string;
 }
 
-export function ClipView({ clip }: ClipViewProps): React.JSX.Element {
+const ClipView = React.memo(function ClipView({ clip }: ClipViewProps): React.JSX.Element {
   const zoomX = useUIStore((s) => s.zoomX);
   const timeSignature = useTransportStore((s) => s.timeSignature);
   const { selectedClipId, selectClip } = useProjectStore();
@@ -56,36 +57,43 @@ export function ClipView({ clip }: ClipViewProps): React.JSX.Element {
         </div>
       )}
 
-      {/* Mini note preview for MIDI clips */}
+      {/* Mini note preview for MIDI clips (memoized) */}
       {clip.type === 'midi' && clip.midiData && clip.midiData.notes.length > 0 && (
-        <div className="absolute inset-x-0 top-4 bottom-0 overflow-hidden">
-          {clip.midiData.notes.map((note) => {
-            const noteLeft = (note.startBeat / clip.durationBeats) * 100;
-            const noteWidth = (note.durationBeats / clip.durationBeats) * 100;
-            // Map pitch to vertical position (higher pitch = higher position)
-            const pitchRange = 48; // Show roughly 4 octaves
-            const minPitch = Math.max(
-              0,
-              Math.min(...clip.midiData!.notes.map((n) => n.pitch)) - 2
-            );
-            const noteTop =
-              (1 - (note.pitch - minPitch) / pitchRange) * 100;
-
-            return (
-              <div
-                key={note.id}
-                className="absolute bg-white/50 rounded-[1px]"
-                style={{
-                  left: `${noteLeft}%`,
-                  width: `${Math.max(noteWidth, 1)}%`,
-                  top: `${Math.max(0, Math.min(95, noteTop))}%`,
-                  height: '3px',
-                }}
-              />
-            );
-          })}
-        </div>
+        <MidiMiniPreview notes={clip.midiData.notes} durationBeats={clip.durationBeats} />
       )}
     </div>
   );
+});
+
+/** Memoized MIDI note mini-preview */
+function MidiMiniPreview({ notes, durationBeats }: { notes: import('../../core/models').MIDINote[]; durationBeats: number }): React.JSX.Element {
+  const noteElements = useMemo(() => {
+    const pitchRange = 48;
+    const minPitch = Math.max(0, Math.min(...notes.map((n) => n.pitch)) - 2);
+    return notes.map((note) => {
+      const noteLeft = (note.startBeat / durationBeats) * 100;
+      const noteWidth = (note.durationBeats / durationBeats) * 100;
+      const noteTop = (1 - (note.pitch - minPitch) / pitchRange) * 100;
+      return (
+        <div
+          key={note.id}
+          className="absolute bg-white/50 rounded-[1px]"
+          style={{
+            left: `${noteLeft}%`,
+            width: `${Math.max(noteWidth, 1)}%`,
+            top: `${Math.max(0, Math.min(95, noteTop))}%`,
+            height: '3px',
+          }}
+        />
+      );
+    });
+  }, [notes, durationBeats]);
+
+  return (
+    <div className="absolute inset-x-0 top-4 bottom-0 overflow-hidden">
+      {noteElements}
+    </div>
+  );
 }
+
+export { ClipView };

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTransportStore } from '../stores/transport-store';
 import { useUIStore } from '../stores/ui-store';
 import { useProjectStore } from '../stores/project-store';
+import { useTutorialStore } from '../stores/tutorial-store';
 
 /**
  * Global keyboard shortcuts for the DAW.
@@ -126,6 +127,8 @@ export function useKeyboardShortcuts(): void {
       'view:mixer': () => useUIStore.getState().togglePanel('mixer'),
       'view:pianoRoll': () => useUIStore.getState().togglePanel('pianoRoll'),
       'view:ai': () => useUIStore.getState().togglePanel('ai'),
+      'menu:new-from-template': () => useUIStore.getState().setTemplateBrowserOpen(true),
+      'menu:start-tutorial': () => useTutorialStore.getState().startTutorial(),
     };
 
     if (ipc) {
