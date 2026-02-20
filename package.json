@@ -11,10 +11,12 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "download-models": "tsx scripts/download-models.ts"
+    "download-models": "tsx scripts/download-models.ts",
+    "mcp-server": "tsx mcp-server/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
     "@tonejs/midi": "^2.0.28",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
@@ -24,6 +26,7 @@
     "tailwind-merge": "^3.5.0",
     "tone": "^15.1.22",
     "onnxruntime-node": "^1.20.0",
+    "zod": "^3.24.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
