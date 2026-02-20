@@ -7,3 +7,5 @@ export * from './automation';
 export * from './effects';
 export * from './send';
 export * from './session';
+export * from './section';
+export * from './mutations';

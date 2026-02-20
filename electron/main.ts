@@ -5,11 +5,15 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { AuthService } from './services/auth-service'
 import { ClaudeAgentService } from './services/claude-agent-service'
 import { PluginHostService } from './services/plugin-host-service'
+import { StemSeparator } from './services/stem-separator'
+import { SunoImporter } from './services/suno-importer'
 
 let mainWindow: BrowserWindow | null = null
 const authService = new AuthService()
 const agentService = new ClaudeAgentService(authService)
 const pluginHost = new PluginHostService()
+const stemSeparator = new StemSeparator()
+const sunoImporter = new SunoImporter()
 
 function createMenu(window: BrowserWindow): Menu {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -241,7 +245,7 @@ function setupIPC(): void {
     pluginHost.unloadPlugin(instanceId)
   })
 
-  // Agent IPC
+  // Agent IPC — returns { success, text, mutations, toolExecutions } or { success: false, error }
   ipcMain.handle(
     'agent:sendMessage',
     async (
@@ -258,12 +262,57 @@ function setupIPC(): void {
           message,
           projectContext
         )
-        return { success: true, ...result }
+        return {
+          success: true,
+          text: result.text,
+          mutations: result.mutations,
+          toolExecutions: result.toolExecutions,
+        }
       } catch (error) {
         return { success: false, error: (error as Error).message }
       }
     }
   )
+
+  // Audio file open dialog
+  ipcMain.handle('file:openAudio', async () => {
+    const result = await dialog.showOpenDialog({
+      filters: [
+        { name: 'Audio Files', extensions: ['wav', 'mp3', 'flac', 'ogg', 'aac', 'm4a'] }
+      ],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return { path: result.filePaths[0] }
+  })
+
+  // Stem separation IPC
+  ipcMain.handle('stems:separate', async (_event, audioPath: string, options: { quality: 'fast' | 'balanced' | 'high'; stems: 4 | 2 }) => {
+    try {
+      const result = await stemSeparator.separate(audioPath, options, undefined, mainWindow)
+      return { success: true, stems: result.stems }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('stems:checkModel', () => {
+    return { available: stemSeparator.isModelAvailable() }
+  })
+
+  ipcMain.handle('stems:cancel', () => {
+    stemSeparator.cancel()
+  })
+
+  // Suno import IPC
+  ipcMain.handle('suno:import', async (_event, url: string) => {
+    try {
+      const result = await sunoImporter.importFromUrl(url, mainWindow)
+      return { success: true, ...result }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  })
 }
 
 function createWindow(): void {

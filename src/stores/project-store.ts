@@ -3,6 +3,7 @@ import type { Project, Track, TimeSignature, Clip, MIDINote } from '../core/mode
 import type { EffectInstance } from '../core/models/effects';
 import type { AutomationLane, AutomationPoint } from '../core/models/automation';
 import type { Send } from '../core/models/send';
+import type { Section } from '../core/models/section';
 import { createDefaultProject } from '../core/models';
 
 interface ProjectState {
@@ -48,6 +49,10 @@ interface ProjectState {
   removeSend: (trackId: string, sendId: string) => void;
   updateSend: (trackId: string, sendId: string, updates: Partial<Send>) => void;
   setTrackOutput: (trackId: string, output: Track['output']) => void;
+
+  // Section CRUD (Phase 3)
+  addSection: (section: Section) => void;
+  removeSection: (sectionId: string) => void;
 }
 
 function mapClipsInTrack(
@@ -380,6 +385,25 @@ export const useProjectStore = create<ProjectState>((set) => ({
           ...t,
           output,
         })),
+      },
+    })),
+
+  // ═══════════════════════════════════════
+  // Section CRUD (Phase 3)
+  // ═══════════════════════════════════════
+  addSection: (section) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        sections: [...state.project.sections, section],
+      },
+    })),
+
+  removeSection: (sectionId) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        sections: state.project.sections.filter((s) => s.id !== sectionId),
       },
     })),
 }));

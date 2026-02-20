@@ -1,11 +1,17 @@
-import { Send, Bot, X } from 'lucide-react';
+import { Send, Bot, X, BarChart3, Undo2, Scissors, Download } from 'lucide-react';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAgentStore } from '../../stores/agent-store';
-import type { AgentType } from '../../stores/agent-store';
+import type { AgentType, AgentMessage } from '../../stores/agent-store';
 import { useAuthStore } from '../../stores/auth-store';
 import { useProjectStore } from '../../stores/project-store';
 import { useUIStore } from '../../stores/ui-store';
 import { AuthButton } from './AuthButton';
+import { ToolExecutionCard } from './ToolExecutionCard';
+import { StemSeparationPanel } from './StemSeparationPanel';
+import { SunoImportDialog } from './SunoImportDialog';
+import { applyMutations } from '../../utils/apply-mutations';
+import type { ProjectMutation, ToolExecution } from '../../core/models/mutations';
+import type { Project } from '../../core/models';
 
 const AGENTS: { type: AgentType; label: string; description: string }[] = [
   { type: 'mixing', label: 'Mixing', description: 'EQ, compression, levels' },
@@ -14,126 +20,245 @@ const AGENTS: { type: AgentType; label: string; description: string }[] = [
   { type: 'analysis', label: 'Analyze', description: 'Mix analysis' },
 ];
 
+function buildProjectContext(project: Project): string {
+  return JSON.stringify({
+    title: project.metadata.title,
+    tempo: project.tempo,
+    timeSignature: project.timeSignature,
+    sections: project.sections || [],
+    tracks: project.tracks.map((t) => ({
+      id: t.id,
+      name: t.name,
+      type: t.type,
+      volume: t.volume,
+      pan: t.pan,
+      muted: t.muted,
+      effects: t.effects.map((e) => ({
+        type: e.type,
+        name: e.name,
+        params: Object.fromEntries(e.parameters.map((p) => [p.name, p.value])),
+      })),
+      sends: (t.sends || []).map((s) => ({
+        targetBusId: s.targetBusId,
+        gain: s.gain,
+      })),
+      clips: t.clips.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        startBeat: c.startBeat,
+        durationBeats: c.durationBeats,
+        ...(c.type === 'midi' && c.midiData
+          ? {
+              midiNotes: c.midiData.notes.map((n) => ({
+                pitch: n.pitch,
+                velocity: n.velocity,
+                startBeat: n.startBeat,
+                durationBeats: n.durationBeats,
+              })),
+            }
+          : {}),
+      })),
+    })),
+  });
+}
+
+interface UndoableStore {
+  project: Project;
+  updateTrack: (trackId: string, updates: Partial<import('../../core/models').Track>) => void;
+  removeEffect: (trackId: string, effectId: string) => void;
+  removeClip: (trackId: string, clipId: string) => void;
+  removeMidiNote: (trackId: string, clipId: string, noteId: string) => void;
+  removeSection: (sectionId: string) => void;
+}
+
+/** Reverse mutations to undo agent changes */
+function undoMutations(
+  store: UndoableStore,
+  mutations: ProjectMutation[]
+): void {
+  for (let i = mutations.length - 1; i >= 0; i--) {
+    const m = mutations[i];
+    switch (m.type) {
+      case 'setTrackVolume': {
+        store.updateTrack(m.trackId, { volume: 0 });
+        break;
+      }
+      case 'setTrackPan': {
+        store.updateTrack(m.trackId, { pan: 0 });
+        break;
+      }
+      case 'addEffect': {
+        const track = store.project.tracks.find((t) => t.id === m.trackId);
+        if (track && track.effects.length > 0) {
+          const lastEffect = [...track.effects].reverse().find((e) => e.type === m.effectType);
+          if (lastEffect) store.removeEffect(m.trackId, lastEffect.id);
+        }
+        break;
+      }
+      case 'createClip': {
+        store.removeClip(m.trackId, m.clip.id);
+        break;
+      }
+      case 'addMidiNotes': {
+        for (const note of m.notes) {
+          store.removeMidiNote(m.trackId, m.clipId, note.id);
+        }
+        break;
+      }
+      case 'createSection': {
+        const section = store.project.sections.find(
+          (s) => s.name === m.name && s.startBeat === m.startBeat
+        );
+        if (section) store.removeSection(section.id);
+        break;
+      }
+    }
+  }
+}
+
 export function AIPanel(): React.JSX.Element {
+  const agentStore = useAgentStore();
   const { activeAgent, setActiveAgent, conversations, addMessage, createConversation, isLoading, setLoading } =
-    useAgentStore();
+    agentStore;
   const { status: authStatus } = useAuthStore();
-  const { project } = useProjectStore();
+  const projectStore = useProjectStore();
+  const { project } = projectStore;
   const { togglePanel } = useUIStore();
   const [input, setInput] = useState('');
+  const [showStemPanel, setShowStemPanel] = useState(false);
+  const [showSunoDialog, setShowSunoDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = conversations.find((c) => c.agentType === activeAgent);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages.length]);
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || isLoading) return;
+  const handleAgentResponse = useCallback(
+    (
+      convId: string,
+      result: {
+        success: boolean;
+        text?: string;
+        mutations?: ProjectMutation[];
+        toolExecutions?: ToolExecution[];
+        error?: string;
+      }
+    ) => {
+      if (result.success && result.text !== undefined) {
+        const mutations = result.mutations || [];
+        const toolExecutions = result.toolExecutions || [];
 
-    setInput('');
+        // Apply mutations to project store
+        if (mutations.length > 0) {
+          applyMutations(projectStore, mutations);
+        }
 
-    // Get or create conversation
-    let convId = activeConversation?.id;
-    if (!convId) {
-      convId = createConversation(activeAgent);
-    }
+        const assistantMsg: AgentMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: result.text,
+          timestamp: new Date().toISOString(),
+          agentType: activeAgent,
+          toolExecutions: toolExecutions.length > 0 ? toolExecutions : undefined,
+          mutations: mutations.length > 0 ? mutations : undefined,
+        };
+        addMessage(convId, assistantMsg);
+      } else {
+        const errorMsg: AgentMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `Error: ${result.error || 'Unknown error'}`,
+          timestamp: new Date().toISOString(),
+          agentType: activeAgent,
+        };
+        addMessage(convId, errorMsg);
+      }
+    },
+    [activeAgent, addMessage, projectStore]
+  );
 
-    // Add user message to store
-    const userMsg = {
-      id: crypto.randomUUID(),
-      role: 'user' as const,
-      content: text,
-      timestamp: new Date().toISOString(),
-      agentType: activeAgent,
-    };
-    addMessage(convId, userMsg);
+  const sendMessage = useCallback(
+    async (text?: string) => {
+      const message = text || input.trim();
+      if (!message || isLoading) return;
 
-    // Send to Claude via IPC
-    const ipc = window.electron?.ipcRenderer;
-    if (!ipc) {
-      // Fallback: no Electron IPC (dev mode in browser)
-      const assistantMsg = {
-        id: crypto.randomUUID(),
-        role: 'assistant' as const,
-        content: 'Claude agent requires Anthropic authentication. Please sign in to use AI features.',
-        timestamp: new Date().toISOString(),
-        agentType: activeAgent,
-      };
-      addMessage(convId, assistantMsg);
-      return;
-    }
+      if (!text) setInput('');
 
-    setLoading(true);
-
-    // Build project context summary
-    const projectContext = JSON.stringify({
-      title: project.metadata.title,
-      tempo: project.tempo,
-      timeSignature: project.timeSignature,
-      tracks: project.tracks.map((t) => ({
-        id: t.id,
-        name: t.name,
-        type: t.type,
-        volume: t.volume,
-        pan: t.pan,
-        muted: t.muted,
-        clipCount: t.clips.length,
-      })),
-    });
-
-    const result = (await ipc.invoke(
-      'agent:sendMessage',
-      activeAgent,
-      convId,
-      text,
-      projectContext
-    )) as { success: boolean; text?: string; toolCalls?: Array<{ name: string; input: unknown }>; error?: string };
-
-    setLoading(false);
-
-    if (result.success && result.text) {
-      let content = result.text;
-      // Append tool call info if any
-      if (result.toolCalls && result.toolCalls.length > 0) {
-        content +=
-          '\n\n' +
-          result.toolCalls
-            .map((tc) => `🔧 ${tc.name}(${JSON.stringify(tc.input)})`)
-            .join('\n');
+      let convId = activeConversation?.id;
+      if (!convId) {
+        convId = createConversation(activeAgent);
       }
 
-      const assistantMsg = {
+      const userMsg: AgentMessage = {
         id: crypto.randomUUID(),
-        role: 'assistant' as const,
-        content,
+        role: 'user',
+        content: message,
         timestamp: new Date().toISOString(),
         agentType: activeAgent,
       };
-      addMessage(convId, assistantMsg);
-    } else {
-      const errorMsg = {
-        id: crypto.randomUUID(),
-        role: 'assistant' as const,
-        content: `Error: ${result.error || 'Unknown error'}`,
-        timestamp: new Date().toISOString(),
-        agentType: activeAgent,
+      addMessage(convId, userMsg);
+
+      const ipc = window.electron?.ipcRenderer;
+      if (!ipc) {
+        const assistantMsg: AgentMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'Claude agent requires Anthropic authentication. Please sign in to use AI features.',
+          timestamp: new Date().toISOString(),
+          agentType: activeAgent,
+        };
+        addMessage(convId, assistantMsg);
+        return;
+      }
+
+      setLoading(true);
+      const projectContext = buildProjectContext(project);
+
+      const result = (await ipc.invoke(
+        'agent:sendMessage',
+        activeAgent,
+        convId,
+        message,
+        projectContext
+      )) as {
+        success: boolean;
+        text?: string;
+        mutations?: ProjectMutation[];
+        toolExecutions?: ToolExecution[];
+        error?: string;
       };
-      addMessage(convId, errorMsg);
-    }
-  }, [
-    input,
-    isLoading,
-    activeAgent,
-    activeConversation,
-    project,
-    addMessage,
-    createConversation,
-    setLoading,
-  ]);
+
+      setLoading(false);
+      handleAgentResponse(convId, result);
+    },
+    [
+      input,
+      isLoading,
+      activeAgent,
+      activeConversation,
+      project,
+      addMessage,
+      createConversation,
+      setLoading,
+      handleAgentResponse,
+    ]
+  );
+
+  const handleAnalyzeMix = useCallback(() => {
+    sendMessage('Analyze the current mix and provide recommendations for improvement.');
+  }, [sendMessage]);
+
+  const handleUndo = useCallback(
+    (msg: AgentMessage) => {
+      if (msg.mutations && msg.mutations.length > 0) {
+        undoMutations(projectStore, msg.mutations);
+      }
+    },
+    [projectStore]
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -182,6 +307,63 @@ export function AIPanel(): React.JSX.Element {
         ))}
       </div>
 
+      {/* Quick actions */}
+      <div className="px-2 py-1.5 border-b border-rach-border flex gap-1 flex-wrap">
+        <button
+          onClick={handleAnalyzeMix}
+          disabled={isLoading}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-rach-accent/10 text-rach-accent hover:bg-rach-accent/20 disabled:opacity-40 transition-colors"
+          title="One-click mix analysis"
+        >
+          <BarChart3 size={10} />
+          Analyze Mix
+        </button>
+        <button
+          onClick={() => setShowStemPanel(!showStemPanel)}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+            showStemPanel
+              ? 'bg-rach-accent text-white'
+              : 'bg-rach-accent/10 text-rach-accent hover:bg-rach-accent/20'
+          }`}
+          title="Stem separation"
+        >
+          <Scissors size={10} />
+          Stems
+        </button>
+        <button
+          onClick={() => setShowSunoDialog(!showSunoDialog)}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+            showSunoDialog
+              ? 'bg-rach-accent text-white'
+              : 'bg-rach-accent/10 text-rach-accent hover:bg-rach-accent/20'
+          }`}
+          title="Import from Suno"
+        >
+          <Download size={10} />
+          Suno
+        </button>
+      </div>
+
+      {/* Stem separation panel */}
+      {showStemPanel && (
+        <div className="px-2 py-1.5 border-b border-rach-border">
+          <StemSeparationPanel onClose={() => setShowStemPanel(false)} />
+        </div>
+      )}
+
+      {/* Suno import dialog */}
+      {showSunoDialog && (
+        <div className="px-2 py-1.5 border-b border-rach-border">
+          <SunoImportDialog
+            onClose={() => setShowSunoDialog(false)}
+            onStemSeparate={() => {
+              setShowSunoDialog(false);
+              setShowStemPanel(true);
+            }}
+          />
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3">
         {!activeConversation || activeConversation.messages.length === 0 ? (
@@ -207,10 +389,38 @@ export function AIPanel(): React.JSX.Element {
                 msg.role === 'user' ? 'text-rach-text' : 'text-rach-accent'
               }`}
             >
-              <div className="font-medium text-[10px] text-rach-text-muted mb-0.5">
-                {msg.role === 'user' ? 'You' : 'Claude'}
+              <div className="flex items-center justify-between mb-0.5">
+                <div className="font-medium text-[10px] text-rach-text-muted">
+                  {msg.role === 'user' ? 'You' : 'Claude'}
+                </div>
+                {msg.role === 'assistant' && msg.mutations && msg.mutations.length > 0 && (
+                  <button
+                    onClick={() => handleUndo(msg)}
+                    className="flex items-center gap-0.5 text-[9px] text-rach-text-muted/60 hover:text-rach-accent transition-colors"
+                    title="Undo these changes"
+                  >
+                    <Undo2 size={9} />
+                    Undo
+                  </button>
+                )}
               </div>
               <div className="whitespace-pre-wrap">{msg.content}</div>
+
+              {/* Tool executions */}
+              {msg.toolExecutions && msg.toolExecutions.length > 0 && (
+                <div className="mt-1.5">
+                  {msg.toolExecutions.map((exec, i) => (
+                    <ToolExecutionCard key={i} execution={exec} />
+                  ))}
+                </div>
+              )}
+
+              {/* Mutation summary */}
+              {msg.mutations && msg.mutations.length > 0 && (
+                <div className="mt-1 text-[10px] text-green-400/80 bg-green-500/5 rounded px-2 py-1">
+                  Applied {msg.mutations.length} change{msg.mutations.length > 1 ? 's' : ''} to project
+                </div>
+              )}
             </div>
           ))
         )}
@@ -232,7 +442,7 @@ export function AIPanel(): React.JSX.Element {
             className="flex-1 bg-transparent px-2 py-1.5 text-xs text-rach-text placeholder:text-rach-text-muted/50 focus:outline-none"
           />
           <button
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={!input.trim() || isLoading}
             className="p-1.5 text-rach-text-muted hover:text-rach-accent disabled:opacity-30 transition-colors"
           >

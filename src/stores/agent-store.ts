@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ProjectMutation, ToolExecution } from '../core/models/mutations';
 
 export type AgentType = 'mixing' | 'composition' | 'arrangement' | 'analysis';
 export type MessageRole = 'user' | 'assistant';
@@ -9,6 +10,8 @@ export interface AgentMessage {
   content: string;
   timestamp: string;
   agentType: AgentType;
+  toolExecutions?: ToolExecution[];
+  mutations?: ProjectMutation[];
 }
 
 export interface Conversation {
