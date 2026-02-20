@@ -234,7 +234,7 @@ export function AIPanel(): React.JSX.Element {
           const assistantMsg: AgentMessage = {
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: 'Please sign in with Google to use AI features.',
+            content: 'Please add your Gemini API key to use AI features. Get a free key at aistudio.google.com/apikey',
             timestamp: new Date().toISOString(),
             agentType: activeAgent,
           };
@@ -396,7 +396,7 @@ export function AIPanel(): React.JSX.Element {
             </p>
             {authStatus !== 'authenticated' && (
               <p className="text-[10px] text-yellow-500/80 mt-2">
-                Sign in to use AI features
+                Add Gemini API key to use AI features
               </p>
             )}
           </div>

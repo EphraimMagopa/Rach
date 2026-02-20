@@ -857,15 +857,15 @@ function translateToolsToGemini(tools: ToolDefinition[]): object {
   };
 }
 
-/** Call the Gemini generateContent API. */
+/** Call the Gemini generateContent API using an API key. */
 async function callGeminiAPI(
-  accessToken: string,
+  apiKey: string,
   model: string,
   systemPrompt: string,
   tools: ToolDefinition[],
   contents: GeminiContent[]
 ): Promise<GeminiResponse> {
-  const url = `${GEMINI_API_BASE}/${model}:generateContent`;
+  const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -876,10 +876,7 @@ async function callGeminiAPI(
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 

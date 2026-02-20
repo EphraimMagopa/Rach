@@ -17,12 +17,5 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5174,
-    proxy: {
-      '/api/google/token': {
-        target: 'https://oauth2.googleapis.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace('/api/google/token', '/token'),
-      }
-    }
   }
 })
