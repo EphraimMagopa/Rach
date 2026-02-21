@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, RefreshCw } from 'lucide-react';
+import { backendClient } from '../../services/backend-client';
 
 interface PluginInfo {
   path: string;
@@ -20,20 +21,11 @@ export function PluginBrowser({ onInsertPlugin }: PluginBrowserProps): React.JSX
   const [isScanning, setIsScanning] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'effect' | 'instrument'>('all');
 
-  const ipc = (window as unknown as {
-    electron?: {
-      ipcRenderer?: {
-        invoke: (ch: string, ...args: unknown[]) => Promise<unknown>;
-      };
-    };
-  }).electron?.ipcRenderer;
-
-  const scanPlugins = async () => {
-    if (!ipc) return;
+  const doScanPlugins = async () => {
     setIsScanning(true);
     try {
-      const result = await ipc.invoke('plugin:scan');
-      setPlugins(result as PluginInfo[]);
+      const result = await backendClient.scanPlugins();
+      setPlugins(result);
     } catch (err) {
       console.error('Plugin scan failed:', err);
     }
@@ -41,7 +33,7 @@ export function PluginBrowser({ onInsertPlugin }: PluginBrowserProps): React.JSX
   };
 
   useEffect(() => {
-    scanPlugins();
+    doScanPlugins();
   }, []);
 
   const filtered = plugins.filter((p) => {
@@ -70,7 +62,7 @@ export function PluginBrowser({ onInsertPlugin }: PluginBrowserProps): React.JSX
             />
           </div>
           <button
-            onClick={scanPlugins}
+            onClick={doScanPlugins}
             className="p-1 rounded hover:bg-rach-surface-light"
             title="Rescan plugins"
             disabled={isScanning}

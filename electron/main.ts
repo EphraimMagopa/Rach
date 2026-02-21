@@ -303,7 +303,9 @@ function setupIPC(): void {
   // Stem separation IPC
   ipcMain.handle('stems:separate', async (_event, audioPath: string, options: { quality: 'fast' | 'balanced' | 'high'; stems: 4 | 2 }) => {
     try {
-      const result = await stemSeparator.separate(audioPath, options, undefined, mainWindow)
+      const result = await stemSeparator.separate(audioPath, options, (progress) => {
+        mainWindow?.webContents.send('stems:progress', progress)
+      })
       return { success: true, stems: result.stems }
     } catch (error) {
       return { success: false, error: (error as Error).message }
@@ -321,7 +323,9 @@ function setupIPC(): void {
   // Suno import IPC
   ipcMain.handle('suno:import', async (_event, url: string) => {
     try {
-      const result = await sunoImporter.importFromUrl(url, mainWindow)
+      const result = await sunoImporter.importFromUrl(url, (progress) => {
+        mainWindow?.webContents.send('suno:progress', progress)
+      })
       return { success: true, ...result }
     } catch (error) {
       return { success: false, error: (error as Error).message }

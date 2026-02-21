@@ -1,8 +1,9 @@
 import type { RachEffectInstance, EffectCategory, EffectParameterDescriptor } from './effect-interface';
+import { backendClient } from '../../services/backend-client';
 
 /**
  * VST3 Effect — RachEffectInstance implementation for external VST3 plugins.
- * Communicates with the main process via IPC for parameter control.
+ * Communicates with the backend via backendClient for parameter control.
  * Audio is processed via AudioWorklet + SharedArrayBuffer ring buffer.
  */
 export class VST3Effect implements RachEffectInstance {
@@ -19,11 +20,11 @@ export class VST3Effect implements RachEffectInstance {
     this.inputGain = context.createGain();
     this.outputGain = context.createGain();
 
-    // Direct passthrough until plugin is loaded via IPC
+    // Direct passthrough until plugin is loaded
     this.inputGain.connect(this.outputGain);
   }
 
-  /** Set the plugin instance ID (returned from main process loadPlugin). */
+  /** Set the plugin instance ID (returned from loadPlugin). */
   setPluginInstanceId(id: string): void {
     this.pluginInstanceId = id;
   }
@@ -47,16 +48,9 @@ export class VST3Effect implements RachEffectInstance {
   setParameter(name: string, value: number): void {
     if (!this.pluginInstanceId) return;
 
-    // Send to main process via IPC
-    const ipc = (window as unknown as {
-      electron?: { ipcRenderer?: { send: (ch: string, ...args: unknown[]) => void } }
-    }).electron?.ipcRenderer;
-
-    if (ipc) {
-      const paramId = parseInt(name.replace('param', ''), 10);
-      if (!isNaN(paramId)) {
-        ipc.send('plugin:setParam', this.pluginInstanceId, paramId, value);
-      }
+    const paramId = parseInt(name.replace('param', ''), 10);
+    if (!isNaN(paramId)) {
+      backendClient.setPluginParam(this.pluginInstanceId, paramId, value);
     }
 
     // Update cached value
@@ -68,7 +62,7 @@ export class VST3Effect implements RachEffectInstance {
     return this.cachedParams;
   }
 
-  /** Update cached parameters from main process response. */
+  /** Update cached parameters from host response. */
   updateParametersFromHost(params: Array<{ id: number; name: string; value: number; min: number; max: number }>): void {
     this.cachedParams = params.map((p) => ({
       name: `param${p.id}`,
@@ -93,15 +87,8 @@ export class VST3Effect implements RachEffectInstance {
   }
 
   dispose(): void {
-    // Tell main process to unload
     if (this.pluginInstanceId) {
-      const ipc = (window as unknown as {
-        electron?: { ipcRenderer?: { send: (ch: string, ...args: unknown[]) => void } }
-      }).electron?.ipcRenderer;
-
-      if (ipc) {
-        ipc.send('plugin:unload', this.pluginInstanceId);
-      }
+      backendClient.unloadPlugin(this.pluginInstanceId);
     }
 
     this.inputGain.disconnect();

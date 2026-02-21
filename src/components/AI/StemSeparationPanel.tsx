@@ -2,6 +2,7 @@ import { Music, Upload, X, AlertCircle } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 import { useStemSeparation } from '../../hooks/use-stem-separation';
 import { useProjectStore } from '../../stores/project-store';
+import { backendClient } from '../../services/backend-client';
 import type { Track, Clip } from '../../core/models';
 
 interface StemSeparationPanelProps {
@@ -23,11 +24,7 @@ export function StemSeparationPanel({ onClose }: StemSeparationPanelProps): Reac
   }, [checkModel]);
 
   const handleSelectFile = useCallback(async () => {
-    const ipc = window.electron?.ipcRenderer;
-    if (!ipc) return;
-    const result = (await ipc.invoke('file:openAudio')) as {
-      path: string;
-    } | null;
+    const result = await backendClient.openAudioFile();
     if (result) setAudioPath(result.path);
   }, []);
 

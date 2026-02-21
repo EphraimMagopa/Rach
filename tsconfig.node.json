@@ -2,8 +2,10 @@
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
     "electron.vite.config.*",
+    "vite.config.mts",
     "electron/**/*",
-    "plugins/**/*"
+    "plugins/**/*",
+    "server/**/*"
   ],
   "compilerOptions": {
     "composite": true,

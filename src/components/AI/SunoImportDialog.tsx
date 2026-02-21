@@ -1,6 +1,7 @@
 import { Download, Link, X, Music } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { useProjectStore } from '../../stores/project-store';
+import { backendClient } from '../../services/backend-client';
 import type { Track, Clip } from '../../core/models';
 
 interface SunoImportDialogProps {
@@ -18,21 +19,10 @@ export function SunoImportDialog({ onClose, onStemSeparate }: SunoImportDialogPr
   const handleImport = useCallback(async () => {
     if (!url.trim()) return;
 
-    const ipc = window.electron?.ipcRenderer;
-    if (!ipc) {
-      setError('Suno import requires Electron');
-      return;
-    }
-
     setIsImporting(true);
     setError(null);
 
-    const result = (await ipc.invoke('suno:import', url.trim())) as {
-      success: boolean;
-      audioPath?: string;
-      metadata?: { title: string; duration: number | null; sourceUrl: string };
-      error?: string;
-    };
+    const result = await backendClient.importSuno(url.trim());
 
     setIsImporting(false);
 

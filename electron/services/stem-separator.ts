@@ -6,7 +6,6 @@
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
-import { app, BrowserWindow } from 'electron'
 
 export interface StemResult {
   name: string
@@ -21,6 +20,10 @@ export interface SeparationOptions {
 export interface SeparationProgress {
   stage: string
   percent: number
+}
+
+export interface StemSeparatorConfig {
+  modelDir?: string
 }
 
 type OnnxSession = {
@@ -39,10 +42,21 @@ export class StemSeparator {
   private session: OnnxSession | null = null
   private abortController: AbortController | null = null
 
-  constructor() {
-    const resourcesPath = app?.isPackaged
-      ? join(process.resourcesPath, 'models')
-      : join(process.cwd(), 'resources', 'models')
+  constructor(config?: StemSeparatorConfig) {
+    let resourcesPath: string
+    if (config?.modelDir) {
+      resourcesPath = config.modelDir
+    } else {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { app } = require('electron')
+        resourcesPath = app?.isPackaged
+          ? join(process.resourcesPath, 'models')
+          : join(process.cwd(), 'resources', 'models')
+      } catch {
+        resourcesPath = join(process.cwd(), 'resources', 'models')
+      }
+    }
     this.modelPath = join(resourcesPath, 'demucs_v4_hq.onnx')
   }
 
@@ -79,13 +93,11 @@ export class StemSeparator {
     audioPath: string,
     options: SeparationOptions,
     onProgress?: (progress: SeparationProgress) => void,
-    window?: BrowserWindow | null
   ): Promise<{ stems: StemResult[] }> {
     this.abortController = new AbortController()
 
     const sendProgress = (stage: string, percent: number) => {
       onProgress?.({ stage, percent })
-      window?.webContents.send('stems:progress', { stage, percent })
     }
 
     sendProgress('Loading model', 5)

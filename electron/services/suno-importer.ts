@@ -6,7 +6,6 @@
 import { join } from 'path'
 import { createWriteStream } from 'fs'
 import { mkdir } from 'fs/promises'
-import { app, BrowserWindow } from 'electron'
 import { get } from 'https'
 import { get as httpGet } from 'http'
 
@@ -19,15 +18,37 @@ export interface SunoImportResult {
   }
 }
 
+export interface SunoProgress {
+  stage: string
+  percent: number
+}
+
+export interface SunoImporterConfig {
+  downloadDir?: string
+}
+
 export class SunoImporter {
+  private downloadDirOverride?: string
+
+  constructor(config?: SunoImporterConfig) {
+    this.downloadDirOverride = config?.downloadDir
+  }
+
   private getDownloadDir(): string {
-    const userDataPath = app?.getPath?.('userData') || join(process.cwd(), '.rach-data')
-    return join(userDataPath, 'suno-imports')
+    if (this.downloadDirOverride) return this.downloadDirOverride
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { app } = require('electron')
+      const userDataPath = app?.getPath?.('userData') || join(process.cwd(), '.rach-data')
+      return join(userDataPath, 'suno-imports')
+    } catch {
+      return join(process.cwd(), '.rach-data', 'suno-imports')
+    }
   }
 
   async importFromUrl(
     url: string,
-    window?: BrowserWindow | null
+    onProgress?: (progress: SunoProgress) => void,
   ): Promise<SunoImportResult> {
     // Validate URL
     if (!url.includes('suno')) {
@@ -37,13 +58,13 @@ export class SunoImporter {
     const downloadDir = this.getDownloadDir()
     await mkdir(downloadDir, { recursive: true })
 
-    window?.webContents.send('suno:progress', { stage: 'Fetching metadata', percent: 10 })
+    onProgress?.({ stage: 'Fetching metadata', percent: 10 })
 
     // Extract song ID from URL
     const songId = this.extractSongId(url)
     const title = `Suno Import ${songId}`
 
-    window?.webContents.send('suno:progress', { stage: 'Downloading audio', percent: 30 })
+    onProgress?.({ stage: 'Downloading audio', percent: 30 })
 
     // Try to download the audio
     // Suno typically serves audio at a CDN URL derived from the song page
@@ -52,13 +73,13 @@ export class SunoImporter {
     const audioPath = join(downloadDir, fileName)
 
     await this.downloadFile(audioUrl, audioPath, (pct) => {
-      window?.webContents.send('suno:progress', {
+      onProgress?.({
         stage: 'Downloading audio',
         percent: 30 + Math.floor(pct * 60),
       })
     })
 
-    window?.webContents.send('suno:progress', { stage: 'Complete', percent: 100 })
+    onProgress?.({ stage: 'Complete', percent: 100 })
 
     return {
       audioPath,
