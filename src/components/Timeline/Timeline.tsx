@@ -241,7 +241,7 @@ export function Timeline(): React.JSX.Element {
         }
       }
     }
-  }, [audioEngine, tracks]);
+  }, [audioEngine, audioEngine.isInitialized, tracks]);
 
   // Handle audio file import via button
   const handleFileImport = useCallback(

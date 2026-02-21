@@ -147,6 +147,20 @@ export function useTransport(audioEngine: AudioEngine): TransportEngine {
     const unsub = useTransportStore.subscribe((state, prevState) => {
       // Play/Stop
       if (state.isPlaying && !prevState.isPlaying) {
+        // Ensure all MIDI tracks have synths assigned before playback.
+        // Synth assignment may have been skipped if tracks were loaded
+        // before the AudioContext was initialized (e.g. AI-created songs).
+        const tracks = useProjectStore.getState().project.tracks;
+        for (const track of tracks) {
+          if ((track.type === 'midi' || track.type === 'instrument') && track.instrumentType) {
+            if (!instrumentManager.getSynth(track.id)) {
+              if (!audioEngine.getTrackNode(track.id)) {
+                audioEngine.createTrackNode(track.id);
+              }
+              instrumentManager.assignSynth(track.id, track.instrumentType);
+            }
+          }
+        }
         engine.play(state.playheadBeats);
       } else if (!state.isPlaying && prevState.isPlaying) {
         engine.stop();
