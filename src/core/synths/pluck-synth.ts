@@ -5,14 +5,15 @@ import type { RachSynthInstance, SynthParameter } from './synth-interface';
  * Karplus-Strong style plucked string synth via Tone.PluckSynth.
  * Clean, bright plucked tones — guitar, harp, koto, pizzicato.
  *
- * Note: PluckSynth doesn't extend Monophonic in Tone.js's type definitions,
- * so PolySynth<PluckSynth> doesn't typecheck. We use PolySynth (unparameterized)
- * and cast PluckSynth-specific options where needed. This works at runtime.
+ * Tone.PluckSynth doesn't extend Monophonic, so PolySynth can't wrap it.
+ * We manage polyphony manually with a voice pool.
  */
 export class PluckSynth implements RachSynthInstance {
   readonly type = 'pluck' as const;
-  private synth: Tone.PolySynth;
+  private voices: Tone.PluckSynth[];
+  private activeNotes = new Map<number, Tone.PluckSynth>();
   private output: Tone.Gain;
+  private maxPolyphony = 8;
 
   private attackNoise = 1;
   private dampening = 4000;
@@ -21,38 +22,63 @@ export class PluckSynth implements RachSynthInstance {
   constructor() {
     this.output = new Tone.Gain(0.6);
 
-    // PluckSynth works with PolySynth at runtime but the types don't align
-    this.synth = new (Tone.PolySynth as any)(Tone.PluckSynth, {
+    const options = {
       attackNoise: this.attackNoise,
       dampening: this.dampening,
       resonance: this.resonance,
       release: 1,
-    });
-    this.synth.maxPolyphony = 8;
-    this.synth.connect(this.output);
-  }
+    };
 
-  noteOn(pitch: number, velocity: number, time?: number): void {
-    const freq = Tone.Frequency(pitch, 'midi').toFrequency();
-    const vel = velocity / 127;
-    if (time !== undefined) {
-      this.synth.triggerAttack(freq, time, vel);
-    } else {
-      this.synth.triggerAttack(freq, undefined, vel);
+    this.voices = [];
+    for (let i = 0; i < this.maxPolyphony; i++) {
+      const voice = new Tone.PluckSynth(options);
+      voice.connect(this.output);
+      this.voices.push(voice);
     }
   }
 
-  noteOff(pitch: number, time?: number): void {
+  private getAvailableVoice(): Tone.PluckSynth {
+    // Find a voice not currently in use
+    for (const voice of this.voices) {
+      if (!this.activeNotes.has(this.getVoiceKey(voice))) {
+        return voice;
+      }
+    }
+    // Steal the oldest voice
+    return this.voices[0];
+  }
+
+  private getVoiceKey(voice: Tone.PluckSynth): number {
+    for (const [key, v] of this.activeNotes) {
+      if (v === voice) return key;
+    }
+    return -1;
+  }
+
+  noteOn(pitch: number, _velocity: number, time?: number): void {
+    const voice = this.getAvailableVoice();
     const freq = Tone.Frequency(pitch, 'midi').toFrequency();
+    this.activeNotes.set(pitch, voice);
+    // PluckSynth is a physical model — no velocity param in triggerAttack
+    voice.triggerAttack(freq, time);
+  }
+
+  noteOff(pitch: number, time?: number): void {
+    const voice = this.activeNotes.get(pitch);
+    if (!voice) return;
+    this.activeNotes.delete(pitch);
     if (time !== undefined) {
-      this.synth.triggerRelease(freq, time);
+      voice.triggerRelease(time);
     } else {
-      this.synth.triggerRelease(freq);
+      voice.triggerRelease();
     }
   }
 
   allNotesOff(): void {
-    this.synth.releaseAll();
+    for (const voice of this.activeNotes.values()) {
+      voice.triggerRelease();
+    }
+    this.activeNotes.clear();
   }
 
   connect(destination: AudioNode): void {
@@ -75,21 +101,21 @@ export class PluckSynth implements RachSynthInstance {
     switch (name) {
       case 'attackNoise':
         this.attackNoise = value;
-        (this.synth as any).set({ attackNoise: value });
+        for (const voice of this.voices) voice.set({ attackNoise: value });
         break;
       case 'dampening':
         this.dampening = value;
-        (this.synth as any).set({ dampening: value });
+        for (const voice of this.voices) voice.set({ dampening: value });
         break;
       case 'resonance':
         this.resonance = value;
-        (this.synth as any).set({ resonance: value });
+        for (const voice of this.voices) voice.set({ resonance: value });
         break;
     }
   }
 
   dispose(): void {
-    this.synth.dispose();
+    for (const voice of this.voices) voice.dispose();
     this.output.dispose();
   }
 }

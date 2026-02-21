@@ -42,12 +42,16 @@ export class OpticalCompressor extends BaseEffect {
         this.compressor.ratio.value = value;
         break;
       case 'attack':
-        this.attack = value;
-        this.compressor.attack.value = value;
+        // DynamicsCompressorNode.attack expects seconds in [0, 1]
+        // AI agents may send ms values — convert if > 1
+        this.attack = value > 1 ? value / 1000 : value;
+        this.compressor.attack.value = Math.max(0, Math.min(1, this.attack));
         break;
       case 'release':
-        this.release = value;
-        this.compressor.release.value = value;
+        // DynamicsCompressorNode.release expects seconds in [0, 1]
+        // AI agents may send ms values — convert if > 1
+        this.release = value > 1 ? value / 1000 : value;
+        this.compressor.release.value = Math.max(0, Math.min(1, this.release));
         break;
       case 'makeup':
         this.makeup = value;
