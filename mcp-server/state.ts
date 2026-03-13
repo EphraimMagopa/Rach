@@ -104,9 +104,9 @@ export function generateChordProgression(
   const chords: Array<{ bar: number; name: string; midiNotes: string[]; midiPitches: number[] }> = [];
 
   for (let bar = 0; bar < numBars; bar++) {
-    const progIdx = bar % styleProgs.length;
+    const progIdx = Math.floor(bar / 4) % styleProgs.length;
     const barProg = styleProgs[progIdx];
-    const degree = barProg[bar % barProg.length] % 7;
+    const degree = barProg[bar % 4] % 7;
     const chordRoot = rootMidi + scale[degree] - 12;
     const quality = qualities[degree];
     const third = quality === 'min' || quality === 'dim' ? 3 : 4;

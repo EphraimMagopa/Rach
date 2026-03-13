@@ -121,11 +121,11 @@ const trackColors = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple
 
 server.tool(
   'create_track',
-  'Create a new track in the project. For MIDI composition, use type "instrument" with an instrumentType.',
+  'Create a new track in the project. For MIDI composition, use type "instrument" with an instrumentType.\n\nSynth selection guide:\n- Piano/keys/chords → "pluck" (bright attack, clean decay) or "fm" (electric piano tones)\n- Bass → "subtractive" (warm, punchy low-end)\n- Pads/atmosphere → "rach-pad" (slow attack, lush sustain — NOT for rhythmic parts)\n- Lead/melody → "wavetable" or "fm" (cutting, expressive)\n- Organ → "organ" (sustained, harmonic-rich)\n- Percussion/plucked → "pluck" (sharp transient)\n- Textures/ambient → "granular" (evolving, experimental)',
   {
     name: z.string().describe('Track name (e.g. "Piano", "Bass", "Drums")'),
     type: z.enum(['audio', 'midi', 'instrument', 'bus']).describe('Track type'),
-    instrumentType: z.enum(synthTypes).optional().describe('Built-in synth: rach-pad (warm pad), subtractive, wavetable, fm, granular, pluck, organ'),
+    instrumentType: z.enum(synthTypes).optional().describe('Built-in synth. Choose by role: pluck/fm for piano/keys, subtractive for bass, rach-pad ONLY for slow pads, wavetable/fm for leads, organ for organ, granular for textures'),
     color: z.enum(trackColors).optional().describe('Track color'),
   },
   async ({ name, type, instrumentType, color }) => {
@@ -161,14 +161,14 @@ server.tool(
 // 8. add_midi_notes
 server.tool(
   'add_midi_notes',
-  'Add MIDI notes to a track. Auto-creates a clip if none exists. Pitches are MIDI numbers (60 = C4). Use generate_chord_progression to get chord pitches.',
+  'Add MIDI notes to a track. Auto-creates a clip if none exists. Pitches are MIDI numbers (60 = C4). Use generate_chord_progression to get chord pitches.\n\nTiming: beats map to bars in 4/4 time — beat 0 = bar 1 beat 1, beat 4 = bar 2 beat 1, beat 8 = bar 3 beat 1. For an 8-bar section, notes span beats 0-31.\n\nVelocity: vary dynamics for musicality — don\'t use the same velocity for every note. Downbeats louder (100-110), upbeats softer (70-85), ghost notes quiet (50-65).',
   {
     trackId: z.string().describe('Track ID, name, or 1-based index'),
     notes: z.array(z.object({
       pitch: z.number().int().min(0).max(127).describe('MIDI pitch (60=C4, 64=E4, 67=G4)'),
-      velocity: z.number().int().min(1).max(127).describe('Note velocity (1-127)'),
-      startBeat: z.number().min(0).describe('Start position in beats'),
-      durationBeats: z.number().min(0.0625).describe('Note length in beats (1=quarter, 0.5=eighth)'),
+      velocity: z.number().int().min(1).max(127).describe('Note velocity (1-127). Use 90-110 for accents/downbeats, 70-85 for normal hits, 50-65 for ghost notes. Vary for realism.'),
+      startBeat: z.number().min(0).describe('Start position in beats (0=bar1 beat1, 4=bar2 beat1, 8=bar3 beat1). Formula: (bar-1)*4 + (beatInBar-1)'),
+      durationBeats: z.number().min(0.0625).describe('Note length in beats: 4=whole, 2=half, 1=quarter, 0.5=eighth, 0.25=sixteenth. Use longer values for sustained parts, shorter for rhythmic.'),
     })).describe('Array of MIDI notes'),
     clipName: z.string().optional().describe('Name for the auto-created clip'),
     startBeat: z.number().optional().describe('Clip start position (default: 0)'),
